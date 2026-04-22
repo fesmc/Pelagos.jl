@@ -1,0 +1,13 @@
+name = "Pelagos"
+uuid = "bc2a0201-bfb2-4e47-b79c-701c42d21d4c"
+authors = ["Alexander Robinson, Matteo Willeit"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.10.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
