@@ -1,0 +1,3 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Pelagos = "bc2a0201-bfb2-4e47-b79c-701c42d21d4c"

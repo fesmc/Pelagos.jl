@@ -1,12 +1,25 @@
 name = "Pelagos"
 uuid = "bc2a0201-bfb2-4e47-b79c-701c42d21d4c"
-authors = ["Alexander Robinson, Matteo Willeit"]
-version = "1.0.0-DEV"
+version = "0.1.0-DEV"
+authors = ["Alexander Robinson", "Matteo Willeit"]
+
+[deps]
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
+NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
+Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-julia = "1.10.10"
+Interpolations = "0.15, 0.16"
+LinearSolve = "2, 3"
+NCDatasets = "0.14"
+Oceananigans = "0.107"
+julia = "1.12"
 
 [extras]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
