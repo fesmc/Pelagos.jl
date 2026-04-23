@@ -1,0 +1,232 @@
+&bgc_par
+
+    !----------------------------------------------------------------------------
+    ! control flags and parameters
+    !----------------------------------------------------------------------------
+    l_sediments = F         ! use sediment model?
+    l_spinup_bgc = F        ! spinup bgc? Net fluxes to the sediments are compensated by input fluxes at the surface
+    l_spinup_sed = F        ! spinup sediments? 
+    year_start_sedonly = 1000 ! simulation year when to start sediment spinup (acceleration), only for l_spinup_sed==T
+    n_year_sedonly = 300    ! years, frequency of calling sediment module repeatedly for 1000 times, only if l_spinup_sed==T
+
+    i_compensate = 2        ! how to apply compensation of sediment fluxes at the surface:
+                            ! 1 = distribute uniformly over the whole ocean
+                            ! 2 = distribute according to annual runoff distribution
+    l_conserve_phos = T
+    l_conserve_sil  = T
+    l_conserve_alk  = F
+
+
+    !----------------------------------------------------------------------------
+    ! tracer concentration scaling options 
+    !----------------------------------------------------------------------------
+    i_A_shelf_ini = 1           ! initialisation of shallow water area:
+                                ! 0 = use A_shelf_ini value
+                                ! 1 = use actual initial area derived from high-resolution initial bathymetry 
+    A_shelf_ini = 20.2          ! mln km2, initial shallow water area, used only if i_A_shelf_ini==0
+    A_shelf_pi  = 20.2          ! mln km2, present-day shallow water area
+    A_shelf_lgm = 8.4           ! mln km2, LGM shallow water area
+    alk_scale_A_shelf = 0.      ! max scaling factor of alkalinity, for a shelf area change between A_shelf_pi and A_shelf_lgm
+    dic_scale_A_shelf = 0.      ! max scaling factor of DIC, for a shelf area change between A_shelf_pi and A_shelf_lgm 
+    po4_scale_A_shelf = 0.      ! max scaling factor of PO4, for a shelf area change between A_shelf_pi and A_shelf_lgm 
+    sil_scale_A_shelf = 0.      ! max scaling factor of silicate, for a shelf area change between A_shelf_pi and A_shelf_lgm 
+
+    ini_tracer_scale = 1.   ! factor to scale ALL bgc tracer initial concentrations 
+                            ! e.g., to counter-balance reduction of ocean volume (see vol in ocn_ts.nc)
+                            !       when initializing LGM runs from PI-restarts for bgc, but LGM restarts for ocn/geo 
+
+    alk_scale = 1.          ! factor to scale initial alkalinity 
+    dic_scale = 1.          ! factor to scale initial DIC 
+    po4_scale = 1.          ! factor to scale initial phosphate 
+    no3_scale = 1.          ! factor to scale initial nitrate 
+    sil_scale = 1.          ! factor to scale initial silicate 
+
+    !----------------------------------------------------------------------------
+    ! surface freshwater flux settings 
+    !----------------------------------------------------------------------------
+    i_bgc_fw = 1            ! freshwater flux used to dilute tracers at the surface: 
+                            ! 1 = P-E+R+SIC
+                            ! 2 = FW-noise-hosing
+                            ! 3 = FW-noise
+                            ! 4 = FW    (including noise and hosing fluxes)
+                            ! 5 = FW_corr
+
+    l_apply_net_fw = T            ! dilute/concentrate surface tracers according to net surface freshwater flux?
+    i_apply_net_fw = 2            ! dilution parameterisation. 1==zero net tracer flux at the surface, 2==compensate non-zero flux over whole ocean
+
+    !----------------------------------------------------------------------------
+    ! carbonate chemistry settings 
+    !----------------------------------------------------------------------------
+    dtday_chemcon = 5        ! days, frequency of updating chemical constants (surface)
+    dtday_chemcon_deep = 10  ! days, frequency of updating chemical constants (deep ocean)
+    calcon = 1.03e-2         ! [ca++] in seawater (moles/kg) (see broecker a. peng, 1982, p. 26) 
+                             ! ([ca++](moles/kg)=1.026e-2*(s/35.) after culkin(1965), cf. broecker et al. 1982)
+    piston_vel = 6.9722e-7   ! m/s, piston velocity, 6.9722e-7 used in OMIP
+    l_pressure = T           ! account for surface pressure effect on solubility? 
+
+    !----------------------------------------------------------------------------
+    ! DMS
+    !----------------------------------------------------------------------------
+    l_dms = T               ! DMS on?
+
+    !----------------------------------------------------------------------------
+    ! corals
+    !----------------------------------------------------------------------------
+    l_corals = F    ! flag for shallow water carbonate sedimentation, coral reefs
+
+    !----------------------------------------------------------------------------
+    ! carbon isotopes
+    !----------------------------------------------------------------------------
+    l_c13 = T              ! enable carbon 13 isotope?
+    l_c14 = T              ! enable carbon 14 isotope?
+    l_frac_poc_aq = T      ! apply fractionation during photosynthesis? 
+    i_frac_poc_aq = 2      ! parameterisation of fractionation during photosynthesis. 1==Laws 1995, 2==Popp 1989, 3==Rau 1989
+    l_frac_aq_gas = T      ! apply fractionation during gas dissolution? (from Zang 1995, OMIP)
+    l_frac_dic_gas = T     ! apply fractionation between total DIC and CO2? (from Zang 1995, OMIP)
+    epsilon_k13 = -0.88    ! permil, kinetic fractionation during gas exchange, -0.88 in OMIP
+    epsilon_cal13 = 0.0    ! permil, fractionation during calcite formation, could be ~1, but highly uncertain
+
+    !----------------------------------------------------------------------------
+    ! marine biology parameters
+    !----------------------------------------------------------------------------
+    ! productivity parameters
+    !----------------------------------------------------------------------------
+    i_radiation = 1         ! radiation profile to be used, 1..original HAMOCC, 2..analytical solution of integral 
+    l_SW_diurnal_cycle = F
+    iphy_growth = 1         ! parameterisation of phytoplankton growth. 1 == HAMOCC, 2 == PISCES, 3 == REcom, 4 == Sherman 2016
+    mu0 = 0.6               ! d-1, max phytoplankton growth rate at 0 degC, 0.6 usually used for iphy_growth==1,2,3 and 3.0 for iphy_growth==4
+    q10_temfa = 1.5         ! Q10 for temperature dependence of phytoplankton growth, used only if iphy_growth==4
+    pi_alpha = 0.03         ! initial slope of production vs irradiance curve, 0.02 for HAMOCC (iphy_growth==1), 2 for PISCES (iphy_growth==2)
+    c_to_chl = 60           ! gC/gChl, Carbon to Chlorophyll ratio in phytoplankton
+    i_bkphy = 1             
+    bkphy = 1e-8            ! kmol P/m3, half-saturation constant for PO4 uptake, 1e-8 in HAMOCC, 4e-8 in Recom, 1e-7 in BLING
+    bkopal_phy = 50.e-6     ! kmol Si/m3, half-saturation constant for diatoms
+    i_mor_plan = 0          ! plankton mortality parameterisation: 0..standard HAMOCC, 1..linear monod, 2..linear for PHY and linear+quad for ZOO
+    dyphy = 0.008           ! d-1, phytoplankton mortality rate, 0.008 in HAMOCC
+    kmor = 1.5e-9           ! kmol P/m3, half saturation constant for plankton mortality
+    l_npp_scale = F         ! scale marine primary production with global temperature changes using npp_scale_dT
+    npp_scale_dT = 0.       ! %/K, scaling of NPP with global temperature anomalies, used only if l_npp_scale==T
+    i_phosy_ice = 1         ! how to account for sea ice impact on photosynthesis. 0..scale avaliable radiation, 1..scale photosynthesis
+    !----------------------------------------------------------------------------
+    ! cyanobacteria
+    !----------------------------------------------------------------------------
+    l_cyadyn = F            ! nitrogen fixation by dynamic cyanobacteria
+    l_doccyaf = F           ! dynamic doccyaf
+    n2_fixation = 0.0025    ! d-1, nitrogen fixation rate, used only if l_cyadyn == F
+    pi_alpha_cya      = 0.03      ! m2 W-1 d-1
+    cya_growth_max    = 0.2       ! d-1
+    cycdec            = 0.1       ! d-1, decay rate                                 
+    Topt_cya          = 28.       ! deg C
+    T1_cya            = 5.5       ! deg C
+    T2_cya            = 1.        ! deg C
+    bkcya_P           = 5.e-8     ! kmolP/m3, 1e-8 in Paulsen 2017  
+    bkcya_fe          = 30.e-8    ! kmolP/m3,  
+    bkcya_N           = 1.e-9     ! kmolP/m3, 1e-9 in Paulsen 2017 (error in their Table 1)
+    doccya_fac        = 0.1
+    buoyancyspeed_cya = 1.        ! daily buoyancy speed of cya  
+    !----------------------------------------------------------------------------
+    ! zooplankton parameters
+    !----------------------------------------------------------------------------
+    l_graz_temp = F         ! temperature dependent grazing rate? (Q10~2)
+    l_zoomor_temp = F       ! temperature dependent zooplankton mortality rate? (Q10~2)
+    l_graz_quad = F         ! sigmoid function for grazing rate?
+    grazra  = 1.0           ! d-1, grazing rate, 1.0 in HAMOCC. If l_graz_temp==F constant value, value at 0 degC otherwise
+    bkzoo  = 4.e-8          ! kmol P/m3, half-saturation constant for zooplankton grazing, 4.e-8 in HAMOCC
+    spemor = 3e6            ! (kmol P/m3)-1 d-1, zooplankton quadratic mortality rate, 3.e6 in HAMOCC
+    spemor1 = 0.01          ! d-1, zooplankton linear mortality rate, 0.03 in PISCES (0.005 for diatoms)
+
+    !----------------------------------------------------------------------------
+    ! POC, OPAL and CaCO3 shells parameters
+    !----------------------------------------------------------------------------
+    lmartin = F             ! Switch for Martin curve POC sinking speed
+    mc_depth = 100.          ! Martin curve parameter, used only if lmartin == T 
+    mc_eu_speed = 3.5        ! Martin curve parameter, used only if lmartin == T
+    mc_fac = 0.858           ! Martin curve parameter, used only if lmartin == T
+    isinkscheme = 1          ! 0 = prescribed, depth-dependent (Martin-type) sinking speed
+                             ! 1 = particle ballasting scheme (Heinemann et al., 2019; https://doi.org/10.5194/gmd-12-1869-2019)
+                             ! 2 = M4AGO aggregate sinking scheme (Maerz et al., 2020; https://doi.org/10.5194/bg-17-1765-2020)
+    l_sinklimit = F          ! limit sinking speed by CFL stability?
+    l_viscosink = F          ! effect of seawater viscosity on particle sinking? (only for ballasting scheme, isinking=1)
+    l_wpoc_const = F        ! use constant POC sinking speed? If not then linear increase with depth (dwpoc_dz) is used, used only for Martin-type sinking (isinkscheme=0)
+    wpoc_zconst = 100       ! m, depth below which POC sinking speed increases with depth, used only for Martin-type sinking (isinkscheme=0)
+    dwpoc_dz = 0.01         ! s-1, rate of increase of POC sinking speed with depth, used only for Martin-type sinking (isinkscheme=0)
+    l_wpoc_scale = F        ! scale POC sinking speed with global temperature changes using wpoc_scale_dT
+    wpoc_scale_dT = 0.      ! %/K, scaling of POC sinking speed with global temperature anomalies, used only if l_wpoc_scale==T
+    sinkspeed_poc = 3.0     ! m/d, POC sinking speed, used if lmartin == F, 5 in HAMOCC, used only for prescribed sinking speeds (isinkscheme=0)
+    sinkspeed_opal = 30.0   ! m/d, sinking speed of opal, used only if l_ballast==F
+    sinkspeed_cal =  30.0   ! m/d, sinking speed of cal, used only if l_ballast==F
+    w0 = 0.5                ! m/d, reference sinking speed for ballasting scheme, used only for ballasting (isinkscheme=1)
+    det_crit = 1.e-9        ! kmolC/m3, to avoid fast sinking of dust under ice, aggregates are only formed for POC > det_crit, used only for ballasting (isinkscheme=1)
+    l_rem_temp = T          ! temperature dependence of remineralisation rate?
+    drempoc_ref = 0.05       ! d-1, POC remineralisation rate, constant value used if l_rem_temp==F (0.025 in HAMOCC), value at temperature trem_ref otherwise
+    dremdoc_ref = 0.004      ! d-1, DOC remineralisation rate, constant value used if l_rem_temp==F (0.004 in HAMOCC), value at temperature trem_ref otherwise
+    q10rem = 2               ! Q10 for temperature dependence of remineralisation rate, only used if l_rem_temp==T, 1.5-2 in Laufkötter 2017
+    trem_ref = 20            ! degC, reference temperature for temperature dependence of remineralisation rate, only used if l_rem_temp==T
+    O2thresh_aerob = 5.e-8     ! kmol m-3, O2 threshold for aerobic remineralization
+    O2thresh_denit = 5.e-7     ! kmol m-3, O2 threshold for denitrification, 5e-7 in HAMOCC
+    denitrification = 0.15   ! d-1, denitrification rate, 0.07 in HAMOCC, adjusted here to account for temperature dependent remineralisation
+    O2thresh_sred = 3.e-6      ! kmol m-3, O2 threshold for sulfate reduction, 3e-6 in HAMOCC
+    l_sulfate_reduction = T  ! enable sulfate reduction of POC?
+    sulfate_reduction_ref = 0.005 ! d-1, sulfate reduction rate, constant value used if l_rem_temp==F (0.005 in HAMOCC), value at temperature trem_ref otherwise
+    i_delcar = 1
+    calmax = 0.08           ! max fraction of CaCO3 production (max rain ratio), 0.2 in HAMOCC
+    bkopal  = 5.e-6         ! kmol Si/m3, half-saturation constant for opal production, 1.e-6 in HAMOCC, 5e-6 in NorESM2
+    ropal = 50.             ! opal to organic phosphorous production ratio, 25 in HAMOCC, 30 in NorESM1.2, 35 in NorESM2
+    i_dremcalc = 3          ! parameterisation of dissolution rate of calcite shells. 1..HAMOCC, 2..HAMOCC sed, 3..Gehlen 2007
+    dremcalc = 0.3          ! d-1, dissolution rate of calcite shells, 0.075 in HAMOCC
+    i_dremopal = 1          ! parameterisation of dissolution rate of opal shells. 1..HAMOCC, 2..Ridgewell 2002
+    dremopal = 0.0025       ! d-1, dissolution rate of OPAL shells, 0.01 in HAMOCC
+
+    !----------------------------------------------------------------------------
+    ! iron cycle 
+    !----------------------------------------------------------------------------
+    f_iron_dust = 0.025     ! kg/kg, fraction of iron mass in dust, 0.035 in HAMOCC, between 0.01 - 0.04 in Perlwitz 2015 depending on source of dust
+    iron_solub = 0.01       ! iron solubility in surface water, 0.01 in HAMOCC, 0.02 in PISCES
+    ratio_Fe_C = 4.e-6      ! mol/mol, Fe:C stochiometric ratio, 3.e-6 in HAMOCC, 4.e-6 in MEDUSA, 5e-6 in REcom, 1-40.e-6 in PISCES
+    i_iron_complexation = 1 ! iron complexation parameterisation. 0..original HAMOCC, 1..Parekh 2004 3rd model + PISCES
+    relaxfe = 20.           ! years, relaxation time for iron to fesoly, used only if i_iron_complexation==0
+    lig_tot = 1.e-9         ! kmol/m3 , = 1 nmol/kg, total ligand concentration
+    k_fe_lig = 100.e9       ! m3/kmol, ligand stability constant, used only if i_iron_complexation==1
+    k_scav_min = 3.e-5      ! d-1, minimum free Fe scavenging rate, used only if i_iron_complexation==1 (3e-5 in PISCES)
+    k_scav_poc = 0.002      ! (mmolC m-3)-1 d-1, slope of free Fe scavenging rate by POC, used only if i_iron_complexation==1 (0.015 in RECOM)
+    k_scav_shells = 0.002   ! (mmol(C/Si) m-3)-1 d-1, slope of free Fe scavenging rate by shells, used only if i_iron_complexation==1 (0.005 in PISCES)
+    k_scav_dust = 0.        ! (g m-3)-1 d-1, free Fe scavenging rate by dust, used only if i_iron_complexation==1 (150 in PISCES)
+
+    !----------------------------------------------------------------------------
+    ! sediment model parameters
+    !----------------------------------------------------------------------------
+    l_rem_temp_sed = T          ! temperature dependence of remineralisation rate?
+    q10rem_sed = 2              ! Q10 for temperature dependence of remineralisation rate, only used if l_rem_temp_sed==T
+    trem_ref_sed = 5            ! degC, reference temperature for temperature dependence of remineralisation rate, only used if l_rem_temp_sed==T
+    O2thresh_denit_sed = 1.e-6  ! kmol m-3, O2 threshold for denitrification, 1e-6 in HAMOCC
+    denit_sed_ref = 0.1         ! d-1, sediment denitrification rate, 0.01 in HAMOCC
+    sred_sed_ref = 2.5e-5       ! d-1, sediment sulfate reduction rate, 2.5e-5 in HAMOCC
+    disso_poc_ref = 0.025       ! (kmol O2/m3)-1 d-1, Degradation rate constant of POC, 0.01 in HAMOCC (but also values as high as 1 used previously)
+    disso_opal = 0.005          ! (kmol Si(OH)4/m3)-1 d-1, Dissolution rate constant of opal, 0.002592 in HAMOCC
+    disso_calc = 0.02           ! (kmol CO3--/m3)-1 d-1, Dissolution rate constant of CaCO3, 0.00864 used in HAMOCC
+    diff_porwat = 1e-9          ! m2/s, pore water diffusivity, 1e-9 in HAMOCC, ~1e-13 in Archer 2002 / Kobayashi 2018
+    i_sed_dry = 0               ! how to treat sediment material when cell becomes dry:
+                                ! 0 = do nothing, forget about solid sediment
+                                ! 1 = dissolve sediment material into the ocean when grid cell becomes dry
+                                ! 2 = dissolve only organic carbon from sediments (with associated nutrients) into the ocean when grid cell becomes dry
+                                ! 3 = solid sediment material is added as precipitation flux to neighboring wet cells
+
+    !----------------------------------------------------------------------------
+    ! preformed tracers 
+    !----------------------------------------------------------------------------
+    l_preformed_tracers = T     ! enable preformed tracers
+
+    !----------------------------------------------------------------------------
+    ! tracer transport flags
+    !----------------------------------------------------------------------------
+    l_trans_poc = F     ! transport (advection+diffusion) particulate organic carbon?
+    l_trans_phy = F     ! transport (advection+diffusion) phytoplankton?
+    l_trans_zoo = F     ! transport (advection+diffusion) zooplankton?
+    l_trans_dust = F    ! transport (advection+diffusion) dust?
+
+    l_isodiff = T
+
+    l_output_3d_mon = F ! write monthly 3D output?
+
+
+/

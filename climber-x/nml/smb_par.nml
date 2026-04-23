@@ -1,0 +1,171 @@
+
+&smb_par
+
+  !-------------------------------------------------------------------
+  ! surface mass balance model selection 
+  !-------------------------------------------------------------------
+  i_smb = 1            ! surface mass balance model to use:
+                       ! 1 = SEMI
+                       ! 2 = accumulation from atmosphere model + PDD scheme for ablation
+                       ! 3 = simple SMB scheme
+
+  !-------------------------------------------------------------------
+  ! PDD model parameters, used only if i_smb==2
+  !-------------------------------------------------------------------
+  i_ablation  = 1      !  
+  s_stat      = 5.0    ! Standard deviation of the air temperature, in deg C
+  beta1       = 3.0    ! Degree-day factor for snow, in (mm WE)/(d*deg C)
+  beta2       = 8.0    ! Degree-day factor for ice, in (mm WE)/(d*deg C)
+  Pmax        = 0.6    ! Saturation factor for the formation of superimposed ice
+  mu          = 9.7155 ! Firn-warming correction, in (d*deg C)/(mm WE)
+
+  i_gamma = 1
+  gamma = 5.           ! K/km, lapse rate, ~5 in Abe-Ouchi 2007 and Kapsch 2021
+
+  i_z_sur_eff = 0       ! effective surface elevation for SMB:
+                        ! 0 = equal to actual surface elevation
+                        ! 1 = increased accounting for sub-grid standard deviation of topography
+  alpha_zstd = 1.       ! factor to correct effective surface elevation using sub-grid standard deviation of topography, used only if i_z_sur_eff==1
+
+  !-------------------------------------------------------------------
+  ! bias correction settings, for i_smb==1,2
+  !-------------------------------------------------------------------
+  l_smb_bias_corr = F         ! apply SMB bias correction?
+  smb_ref_file = "input/MARv3.11_GRL_ERA5_clim_1981_2010.nc"          ! reference SMB file, used only if l_smb_bias_corr==T
+  smb_cx_ref_file = "input/CLIMBER-X_SMB_GRL-16KM_clim_1981_2010.nc"     ! CLIMBER-X reference SMB file, used only if l_smb_bias_corr==T
+  year_ini_smb_ref = 1981     ! start year over which to compute reference SMB climatology
+  year_end_smb_ref = 2010     ! end year over which to compute reference SMB climatology
+  i_t2m_bias_corr = 0         ! present-day near-surface air temperature bias correction
+                              ! 0 = no bias correction
+                              ! 1 = annual bias correction from input file bias_corr_file
+                              ! 2 = seasonal bias correction derived from monthly input file bias_corr_file
+  i_prc_bias_corr = 0         ! present-day precipitation bias correction
+                              ! 0 = no bias correction
+                              ! 1 = constant MJJAS bias correction derived from monthly input file bias_corr_file
+                              ! 2 = seasonal bias correction derived from monthly input file bias_corr_file
+  bias_corr_file = "input/bias_jja_NA_1981_2010_ERA5.nc" !"input/bias_1981_2010_ERA5.nc"
+  t2m_bias_scale_fac = 1.     ! scaling factor for temperature bias correction
+  t2m_bias_corr_uniform = 0.  ! K, 2 m temperature bias correction applied uniformely everywhere
+  dLW_dT_fac = 1.             ! scaling factor for sensitivity of downward longwave at the surface on near-surface air temperature
+
+  d_cld = 0.                  ! delta cloud fraction 
+
+  wind_ele_fac = 0. !1e-3
+
+  l_Tvar_ann = F
+  Tvar_ann_amp = 0.
+  Tvar_ann_period = 10
+
+  l_Tvar_day = F
+  Tvar_day_amp = 1.
+  Tvar_day_period = 1
+
+  !-------------------------------------------------------------------
+  ! mapping method
+  !-------------------------------------------------------------------
+  map_method = "bil"          ! mapping method
+                              ! con = conservative
+                              ! bil = bilinear
+                              ! bic = bicubic
+  filt_sigma = 100            ! km, sigma for Gaussian smoothing
+
+  ! regional climate forcing? only with flag_atm==false
+  l_regional_climate_forcing = F
+
+  nday_update_climate = 3     ! days, frequency of climate update for semi
+
+  l_diurnal_cycle = F         ! use parameterisation of diurnal cycle for melt and refreezing?
+  tstd_scale = 0.             ! scaling factor for standard deviation of daily temperature, used only if l_diurnal_cycle==T
+
+  l_maxice = F                ! apply large negative SMB (smb_maxice) outside ice area specified by mask_maxice_file?
+  mask_maxice_file = "input/RTopo-2.0.1_0.1deg_icemask.nc"    ! maximum ice extent mask file, used only if l_maxice==T
+  smb_maxice = -4000.         ! kg/m2/yr, mass balance to be applied outside of allowed ice mask, used only if l_maxice==T
+
+  smb_crit_mask = -20000.     ! kg/m2/yr, critical PDD-based SMB used to define where SEMI is applied, used only if i_smb==1
+  n_smb_mask_ext = 2          ! number of iterations for extension of SEMI domain mask around the borders
+
+  ! surface energy fluxes params
+  l_neutral  = F            ! assume neutral stratification?
+  l_dew      = T            ! allow dew deposition?
+  z0m_ice = 0.002             ! m, ice sheet surface roughness length
+
+  i_f_ice = 2                 ! sub-grid ice fraction parameterisation:
+                              ! 0 = ice fraction 1 everywhere
+                              ! 1 = ice fraction 1 only where ice thickness >0 , 0 elsewhere
+                              ! 2 = dependent on ice thickness and topographic roughness + increase at the margin using average over 3x3 neighboring cells
+  h_ice_crit = 0.             ! m, critical ice thickness for ice cover fraction, used only if i_f_ice==2
+  c_fice = 1.                 ! factor for ice fraction dependence on topographic roughness, used only if i_f_ice==2
+  z_sur_std_crit = 0.         ! m, critical topographic roughness for ice cover fraction, used only if i_f_ice==2
+
+  i_alb_ice = 1               ! ice sheet albedo parameterisation:
+                              ! 0 = use constant ice albedo alb_ice_const
+                              ! 1 = variable ice albedo accounting for firn -> ice transition and dirt accumulation 
+  i_alb_ice_margin = 1        ! ice sheet margin albedo parameterisation, used only if i_alb_ice==1:
+                              ! 0 = use constant ice albedo alb_ice_margin_const
+                              ! 1 = average of ice albedo of neighboring ice points
+  alb_soil = 0.2              ! albedo of bare soil, used only  if i_alb_bg==2
+  alb_ice_const = 0.4         ! constant albedo of ice, used only for i_alb_ice==0
+  alb_ice_margin_const = 0.7  ! constant albedo of ice at margin points, used only for i_alb_ice_margin==0
+  alb_firn = 0.7              ! albedo of firn, used only for i_alb_ice==1
+  alb_ice_clean = 0.55        ! albedo of clean ice, used only for i_alb_ice==1
+  alb_ice_dirty = 0.4         ! albedo of dirty ice, used only for i_alb_ice==1
+  tau_alb_ice_dirty = 100.    ! yr, scale of relaxation to albedo of dirty ice, used only for i_alb_ice==1
+  h_firn = 100.               ! m, thickness of firn layer
+
+  !-------------------------------------------------------------------
+  ! precipitation downscaling parameters
+  !-------------------------------------------------------------------
+  l_elevation_corr = F        ! apply elevation correction of precipitation using Clausius-Clapeyron dependence on temperature?
+  z_sur_crit_fele = 0.        ! m, height above which to apply elevation correction, used only if l_elevation_corr==T, 1500-2000 in CLIMBER-2 and Kapsch 2021
+  z_sur_high_fele = 4000.     ! m, height above which precipitation is additionally reduced by a factor 0.1 
+  dP_dT = 0.05                ! sensitivity of precipitation to temperature (~0.07, or 7%, for Clausius-Clapeyron), used only if l_elevation_corr==T
+  dT_rain_snow = 2.
+  l_slope_effect = F          ! account for slope effect on precipitation?
+  iwind_synoptic = 3          ! , used only if l_slope_effect==T 
+  topo_filter_width = 10.     ! km, width of gaussian filter for topography, used only if l_slope_effect==T
+  wind_factor = 20.0          ! wind factor for upslope orographic precipitation enhancement, used only if l_slope_effect==T
+  wind_mod_factor = 0.1       ! wind factor for orographic precipitation enhancement, used only if l_slope_effect==T
+  f_wind_max = 3.             ! maximum orographic precipitation enhancement factor, used only if l_slope_effect==T
+
+  !-------------------------------------------------------------------
+  ! snow parameterisations
+  !-------------------------------------------------------------------
+  rho_snow  = 250.            ! kg/m3, snow density 
+  lambda_snow = 0.3           ! W/m/K, snow heat conductivity
+  isnow_albedo = 2            ! snow albedo parameterisation. 1..CLIMBER-2 (Warren 1980) | 2..Dang 2015
+  lsnow_aging = T             ! enable snow aging? 
+  lsnow_dust  = T             ! enable dust deposition on snow? 
+  w_snow_dust = 10.           ! kg/m2, snow water equivalent the melt of which causes a doubling in dust concentration in snow
+  dust_con_scale = 1.
+  dalb_snow_vis = 0.          ! visible snow albedo offset
+  dalb_snow_nir = 0.          ! near-infrared snow albedo offset
+  f_age_t = 0.1               ! temperature parameter for snow aging
+  dT_age = 0.0
+  snow_0 = 1.0                ! kg/m2/day, critical snowfall rate for grain size evolution, used only if lsnow_aging==T
+  snow_1 = 0.5                ! parameter in dependence of snowfall rate for grain size evolution, used only if l_snow_aging==T
+  snow_grain_fresh = 50       ! um, snow grain size of fresh snow
+  k_sigma_orog = 0.
+  sigma_orog_crit = 1000.
+  c_fsnow = 10.
+  l_fsnow_orog = T
+  c_fsnow_orog = 2e-4 
+  i_rfz = 2
+  porosity = 0.7              ! snow porosity, determines 'space' available for refreezing
+  f_rfz_max = 1.              ! maximum refreezing fraction
+  f_rfz_to_snow_max = 0.5     ! parameter to control maximum fraction of refreezing going into snow
+  wsnow_crit_rfz = 1000.      ! kg/m2, critical snow water equivalent above which a fraction f_rfz_to_snow_max is refrozen to snow
+  w_snow_max = 1000.          ! kg/m2, maximum snow water equivalent
+
+  !-------------------------------------------------------
+  ! settings for simulations with l_regional_climate_forcing==true
+  !-------------------------------------------------------
+  ifake_atm_hires = 0          ! 0 = seasonally variable climatological atmosphere from fake_atm_hires_const_file, 1 = yearly varying atmosphere from fake_atm_var_file
+  fake_atm_hires_const_file  = "input/MARv3.6_GRL_ERA_Interim_clim_1980_2010.nc"
+  fake_atm_hires_var_file    = ""
+  prc_forcing  = 0       ! 0 = read rain and snow separately from file fake_atm_* , 1 = derive rain and snow from total precipitation input in fake_atm_*
+  wind_forcing = 1       ! 0 = read u and v wind separately and derive wind speed (approx!), 1 = read wind speed directly
+ 
+  l_write_timer = F             ! write simulation times of the different smb model components to standard output?
+  l_monthly_output = F
+  l_daily_output = F
+/

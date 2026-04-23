@@ -1,0 +1,81 @@
+&sic_par
+
+ !-----------------------------------------------------------------------------------------
+ ! min and max sea ice and snow thickness 
+ !-----------------------------------------------------------------------------------------
+ f_sic_min = 0.01          ! 1, minimum sea ice concentration
+ h_sic_min = 0.01          ! m, minimum sea ice thickness for explicit layer
+ h_snow_min = 0.001        ! m, minimum snow thickness
+ h_sic_max = 50.0          ! m, maximum sea ice thickness
+ h_snow_max = 1.0          ! m, maximum snow thickness, excess snow is converted to sea ice
+
+ !-----------------------------------------------------------------------------------------
+ ! sea ice concentration parameters
+ !-----------------------------------------------------------------------------------------
+ i_fsic = 2                ! sea ice fraction (concentration):
+                           ! 1 = diagnostic thickness-area relation from CLIMBER-2
+                           ! 2 = prognostic following Fichefet 1997
+                           ! 3 = prognostic following MPIOMv1
+ f_sic_max = 1.            ! maximum allowed sea ice concentration
+ f_sic_pow = 0.25          ! exponent of the power-law relation between ice thickness and ice fraction, 0.25 in climber-2, used only if i_fsic==1
+ h0 = 0.5                  ! m, thickness of newly formed sea ice, used only if i_fsic>1
+
+ !-----------------------------------------------------------------------------------------
+ ! sea ice thermodynamics parameters
+ !-----------------------------------------------------------------------------------------
+ lambda_sic = 2.2          ! W/m/K, heat conductivity of sea ice
+ lambda_snow = 0.3         ! W/m/K, heat conductivity of snow
+ h_k_crit = 5.             ! m, critical ice thickness above which sub-grid scale conductivity is dampened
+ u_star = 0.01             ! m/s, friction velocity below sea ice. 0.02 used by Weaver 2001, see also Fig.3 in Hayes and Morison 2008
+ i_ice_albedo = 2          ! sea ice albedo parameterisation. 1..same as in land model, 2..following CAM3
+ alb_sic_vis = 0.8         ! bare sea ice albedo in visible band
+ alb_sic_nir = 0.6         ! bare sea ice albedo in near infrared band
+ c_alb_sic = 0.075         ! sea ice albedo temperature dependence parameter
+ i_snow_albedo = 2         ! snow albedo parameterisation. 1..CLIMBER-2 (Warren 1980) | 2..Dang 2015
+ l_snow_aging = T          ! enable snow aging? 
+ f_age_t = 0.1             ! temperature parameter for snow aging
+ snow_0 = 1.0              ! kg/m2/day, critical snowfall rate for grain size evolution, used only if l_snow_aging==T
+ snow_1 = 0.5              ! parameter in dependence of snowfall rate for grain size evolution, used only if l_snow_aging==T
+ snow_grain_fresh = 50     ! micro m, snow grain size of fresh snow
+ snow_grain_old = 1000     ! micro m, snow grain size of old snow
+ l_snow_dust = T           ! dust effect on snow albedo?
+ i_cd_ocn = 2              ! drag/exchange coefficients over the ocean:
+                           ! 0 = constant values Cde0 and Cdh0
+                           ! 1 = coefficients from Large and Yaeger 2004, including wind dependence and stability dependence for sensible heat only
+                           ! 2 = computed from Cde0 and Cdh0 with stability dependence using bulk Richardson number
+ l_neutral_ocn = F         ! assume neutral stratification over open ocean?
+ l_neutral_sic = F         ! assume neutral stratification over sea ice?
+ z0m_ocn  = 0.0005         ! ocean water roughness length for momentum (m)
+ z0m_sic  = 0.005          ! sea ice roughness length for momentum (m)
+ Cde0 = 1.2e-3             ! exchange coefficient for moisture over ocean, realistic values : 1.1e-3 - 1.4e-3
+ Cdh0 = 1.e-3              ! exchange coefficient for heat over ocean, realistic values around 1.e-3
+ f_Ri_unstab = 1.          ! Richardson number factor for unstable stratification, used only if i_cd_ocn==2
+ f_Ri_stab = 0.            ! Richardson number factor for stable stratification, used only if i_cd_ocn==2
+
+ !-----------------------------------------------------------------------------------------
+ ! sea ice dynamics parameters, partly from SIS2
+ !-----------------------------------------------------------------------------------------
+ i_adv = 2                 ! advection scheme: 1 = upstream , 2 = FCT
+ diffsic = 0.              ! m2/s, sea ice horizontal diffusivity
+ p0 = 2.e4                 ! A constant in the expression for the ice strength, P* in Hunke and Dukowicz 1997.[Pa], default=2.75e4
+ c0 = 20.                  ! A constant in the exponent of the expression for the ice strength, c* in Hunke and Dukowicz 1997.
+ cdw = 3.24e-3             ! The drag coefficient between the sea ice and water. [nondim]
+ EC = 2.0                  ! The ellipticity coefficient for the plastic yield curve in the sea-ice rheology.  
+                           ! For an infinite ellipticity (i.e., a cavitating fluid rheology), use 0. units="Nondim"
+ drag_bg_vel2 = 0.0        ! A background (subgridscale) velocity for drag with the ocean squared [m2 s-2].  This is always 0 for now.
+ Tdamp = -0.9              ! The damping timescale associated with the elastic terms in the sea-ice dynamics equations (if positive) 
+                           ! or the fraction of DT_ICE_DYNAMICS (if negative). units="s or nondim", default=-0.2
+ del_sh_min_scale = 2.0    ! A scaling factor for the minimum permitted value of minimum shears 
+                           ! used in the denominator of the stress equations [nondim]. Probably needs to be greater than 1.
+ project_drag_vel = T      ! If true, project forward the ice velocity used in the drag calculation to avoid an instability that can occur 
+                           ! when an finite stress is applied to thin ice moving with the velocity of the ocean.
+ project_f_sic =  T        ! If true, project the ice concentration and related ice strength changes due to the convergent or divergent ice flow.
+ evp_sub_steps = 50        ! The number of iterations in the EVP dynamics for each slow time step. default=432
+ cfl_fac = 0.1             ! factor for CFL stability near the Poles
+
+ !-----------------------------------------------------------------------------------------
+ ! control of sea ice model output 
+ !-----------------------------------------------------------------------------------------
+ l_diag_dyn = F            ! enable detailed output of the dynamics?
+ l_daily_output = F        ! enable daily output?
+/

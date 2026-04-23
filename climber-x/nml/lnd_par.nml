@@ -1,0 +1,352 @@
+&lnd_par
+
+    !------------------------------------------------------------------------------------
+    ! intialisation, TODO 
+    !------------------------------------------------------------------------------------
+    i_init_veg   = 1            ! how to initialize vegetation cover (used only if lnd_restart==F in control.nml):
+                                ! 1 .. bare soil everyhere
+                                ! 2 .. forest everywhere
+
+    !------------------------------------------------------------------------------------
+    ! dynamic vs fixed settings 
+    !------------------------------------------------------------------------------------
+    l_dynveg     = T            ! enable dynamic vegetation? If l_dynveg==F, then PFTs fractions are read from file pft_fix_file
+    pft_fix_file = "input/pfts_pi.nc" ! file with prescribed PFTs, used only if l_dynveg==F
+    l_fixlai     = F            ! fix leaf area index? If l_fixlai==T, then maximum LAI is read from file lai_fix_file
+    lai_fix_file = "input/lai_pi.nc" ! file with prescribed balanced (max) leaf area index, used only if l_fixlai==T
+    l_co2_fert_lim = F          ! limit CO2 fertilisation?
+    co2_fert_lim_min = 280.     ! ppm, minimum CO2 concentration for CO2 fertilisation, used only if l_co2_fert_lim==T
+    co2_fert_lim_max = 280.     ! ppm, maximum CO2 concentration for CO2 fertilisation, used only if l_co2_fert_lim==T
+
+    !------------------------------------------------------------------------------------
+    ! time steps 
+    !------------------------------------------------------------------------------------
+    dt_day_veg   = 30           ! days, time step for vegetation dynamics
+    dt_day_carb  = 30           ! days, time step for carbon cycle
+
+    !------------------------------------------------------------------------------------
+    ! surface energy fluxes params
+    !------------------------------------------------------------------------------------
+    l_diurnal_cycle = F         ! use parameterisation of diurnal cycle for snowmelt?
+    l_neutral = F               ! assume neutral stratification?
+    z_sfl = 50.                 ! m, reference height for turbulent heat fluxes
+    i_racan = 3                 ! parameterisation of aerodynamic resistance below canopy:
+                                ! 1 .. only wind dependence
+                                ! 2 .. wind + LAI+SAI dependence
+                                ! 3 .. same as resistance over bare soil
+    p_cdense = 0.002            ! dense canopy drag coefficient for below canopy resistance, used only for i_racan=1,2
+    z0m_bare = 0.01             ! m, roughness length of bare soil/desert
+    z0m_ice = 0.002             ! m, roughness length of ice sheets
+    z0m_lake = 0.001            ! m, roughness length of lake water
+    z0m_lake_ice = 0.005        ! m, roughness length of lake ice
+    i_z0h = 4                   ! parameterisation of roughness length for heat and water vapor:
+                                ! 1 .. constant ratio (zm_to_zh_const) to roughness for momentum
+                                ! 2 .. roughness Reynolds number dependence from Brutsaert 1982 and Kanda 2007
+                                ! 3 .. roughness Reynolds number dependence from Zilitinkevich 1995 
+                                ! 4 .. same as 3, but with Yang 2008 for non-vegetated surfaces 
+    zm_to_zh_const = 0.1353353  ! constant ratio between roughness length for momentum and heat, used only if i_z0h==1
+    f_Ri_unstab = 2.            ! Richardson number factor for unstable stratification
+    f_Ri_stab = 0.              ! Richardson number factor for stable stratification
+
+    !------------------------------------------------------------------------------------
+    ! hydrology params
+    !------------------------------------------------------------------------------------
+    i_runoff    = 1             ! runoff parameterisation: 1..bottom free drainage, 2..simtop and no bottom drainage
+    l_runoff_icemelt = F        ! allow for runoff from ice sheet melt?
+    i_cond_theta= 2             ! use liquid+frozen water (1) or only liquid water (2) for hydraulic conductivity
+    i_evp_soil = 2              ! parameterisation of soil evaporation:
+                                ! 1 .. Lee and Pielke 1992 
+                                ! 2 .. quadratic with soil moisture 
+    theta_crit_evp = 0.25       ! m3/m3, critical volumentric soil moisture for bare soil evaporation parameterisation 
+    dz_evp = 0.05               ! m, maximum depth from which evaporation can occur
+    frac_inf_2 = 0.0            ! fraction of infiltration added to second soil layer, as opposed to the top layer
+    l_dew       = F             ! allow dew deposition?
+    l_prc_intercept = T         ! allow for precipitation interception by vegetation?
+    tau_w = 1.                  ! days, removal time scale of water from canopy
+    tau_s = 1.                  ! days, removal time scale of snow from canopy
+    alpha_int_w_tree = 0.2      ! interception factor for water, CLM, TUNABLE
+    alpha_int_w_grass = 0.1     ! interception factor for water, CLM, TUNABLE
+    alpha_int_s = 0.5           ! interception factor for snow
+    can_max_w = 0.2             ! kg/m2, canopy interception capacity parameter Verseghy 1991
+    can_max_s = 0.2             ! kg/m2, canopy interception capacity parameter for snow
+    p_psi_min    = -150.0       ! m, matric potential at wilting point
+    p_psi_max    = -5.0         ! m, matric potential at field capacity (approx)
+    i_wtab      = 5             ! param of water table depth
+    i_fwet      = 3             ! param of water saturated fraction; 1..SIMTOP, 2..DYPTOP, 3..TOPMODEL
+    wtab_scale  = 4             ! scaling for water table depth, used only if i_wtab==3
+    f_wtab       = 2.5          ! scaling parameter in computation of saturated grid cell fraction 
+    fmax_crit    = 0.55         ! critical maximum wetland fraction above which wetlands can occur, used only if i_fwet==1,2
+    cti_min = 0.                ! minimum CTI index for floodability, 8.5 in Kleinen 2020
+    cti_mean_crit = 5.5         ! critical grid-cell mean CTI index below which no wetlands, 5.5 in Kleinen 2020, used only for i_fwet==3
+
+    !------------------------------------------------------------------------------------
+    ! lake parameters 
+    !------------------------------------------------------------------------------------
+    K_eddy_lake_bg = 1.e-5      ! m2/s, background lake eddy diffusivity
+    K_eddy_lake_max = 1.e-5     ! m2/s, maximum lake eddy diffusivity (for numerical stability)
+    z_mix_lake_min = 10.        ! m, minimum depth of mixed layer
+    dz_lake_ice = 0.2
+
+    !------------------------------------------------------------------------------------
+    ! snow parameterisations
+    !------------------------------------------------------------------------------------
+    rho_snow = 250              ! kg/m3, snow density
+    lambda_snow = 0.3           ! W/m/K, snow heat conductivity
+    f_snow_sub   = F            ! subgrid snow fraction for albedo?
+    i_snow_albedo = 2           ! snow albedo parameterisation. 1..CLIMBER-2 (Warren 1980) | 2..Dang 2015
+    l_snow_aging = T            ! enable snow aging? 
+    f_age_t = 0.1               ! temperature parameter for snow aging
+    snow_0 = 1.0                ! kg/m2/day, critical snowfall rate for grain size evolution, used only if l_snow_aging==T
+    snow_1 = 0.5                ! parameter in dependence of snowfall rate for grain size evolution, used only if l_snow_aging==T
+    snow_grain_fresh = 50       ! micro m, snow grain size of fresh snow
+    snow_grain_old = 1000       ! micro m, snow grain size of old snow
+    l_snow_dust = T             ! dust effect on snow albedo?
+    w_snow_crit = 10.           ! kg/m2, minimum snow water equivalent for explicit snow layer
+    w_snow_off = 1000           ! kg/m2, maximum snow water equivalent
+    alb_ice = 0.5               ! bare ice sheet albedo
+    l_fsnow_orog = T            ! reduce snow cover fraction over rough topography?
+    c_fsnow = 12.               ! parameter in snow cover fraction parameterisation
+    c_fsnow_orog = 3e-4         ! parameter in snow cover fraction parameterisation, used only if l_fsnow_orog==T
+    z_veg_std_min = 0.          ! m, minimum standard deviation of sub-grid topography, used only if l_fsnow_orog==T
+    l_ice_albedo_semi = T       ! use ice sheet albedo computed in SEMI also in climate model?
+
+    !------------------------------------------------------------------------------------
+    ! dust emissions params
+    !------------------------------------------------------------------------------------
+    b0 = 6.e-9                 ! dust emission flux constant [kg s^2 m^-5]
+    qd = 0.01                   ! desert dust source scaling constant
+    qg = 0.005                  ! grass dust source scaling constant
+    wind_gust_fac = 0.          ! 1/(1000 m), factor to scale wind to account for topographic roughness-dependent wind gusts
+    u0 = 2.                     ! wind velocity threshold [m/s]
+    i_fsnow = 1                 ! snow fraction used for dust emission limitation: 1..based on snow thickness | 2..using snow fraction
+    i_theta = 1                 ! soil moisture to use for dust emission limitation: 1..liquid+frozen | 2..only liquid
+    sm_t = 0.15                 ! soil moisture of transition [m3/m3]
+    sm_n = 10.                  ! normalisation constant
+    lai_t = 1.                  ! grass leaf area index of transition [m2/m2]
+    lai_n = 1.0                 ! normalization constant [m2/m2]
+    l_dust_stab = T             ! stability factor for dust emissions?
+    l_dust_topo = T             ! topographic factor for dust emissions?
+    topo_exp = 5                ! exponent for topographic dust emission factor, used only if l_dust_topo==T, 5 in Ginoux 2001
+
+    !------------------------------------------------------------------------------------
+    ! photosynthesis params
+    !------------------------------------------------------------------------------------
+    sw_par_frac = 0.5           ! fraction of SW down radiation which is PAR 
+    i_ci = 2                    ! parameterisation of ci/ca ratio; 1..Medlyn 2011 optimality, 2..Prentice 2014 optimality
+    i_beta = 1                  ! beta parameter for Prentice 2014 optimality (i_ci==2); 0..constant, 1..soil moisture dependence
+    i_vcmax = 2                 ! parameterisation of Vcmax; 1.. LPJ strong optimality after HaxeltinePrentice 1996, 2..CLM temperature-dependent
+    i_disc = 2                  ! isotopic discrimination parameterisation; 
+
+    !------------------------------------------------------------------------------------
+    ! soil respiration params
+    !------------------------------------------------------------------------------------
+    f_resp_litter = 0.7         ! fraction of decomposed litter respired directly as CO2 to the atmosphere (0.7 in LPJ)
+    f_litter_to_fast = 0.985    ! fraction of (1-f_resp_litter) transferred to the fast carbon pool, the rest goes to the slow pool (0.985 in LPJ)
+    k_min      = 5000.          ! years, slowest soil carbon turnover time scale
+    k10_litter = 2.86           ! years, litter turnover time scale (2.86 in LPJ)
+    k10_fast   = 33.3           ! years, fast soil carbon turnover time scale (33.3 in LPJ)
+    k10_slow   = 1000.0         ! years, slow soil carbon turnover time scale (1000 in LPJ)
+    z_tau      = 10.            ! m, e-folding depth for reduction of soil carbon decomposition rate with depth, 0.5 in CLM4.5, 10 in CLM5
+    z_litter_in = 0.1           ! m, e-folding depth for vertical decay of aboveground litter input, 0.1 in CLM
+    iresp_temp = 1              ! param of temperature dependence of soil respiration:
+                                ! 1..Lloyd and Taylor 1994
+                                ! 2..Arrhenius with activation energy Ea
+                                ! 3..Q10 with q10_c value
+    Ea         = 0.32           ! eV, activation energy for Arrhenius dependence of soil respiration on temperature only for iresp_temp=2, 
+                                ! 0.32 corresponds roughly to q10=1.5
+    q10_c      = 1.5            ! Q10 for temperature dependence of soil respiration, only if iresp_temp=3
+    iresp_moist = 3             ! param of moisture dependence of soil respiration:
+                                ! 0..no soil respiration dependence on soil moisture
+                                ! 1..Porporato 2003
+                                ! 2..Koven 2013
+                                ! 3..Porporato 2003, but using total soil water content (liquid+frozen)
+    theta_crit_fmoist = 0.0     ! m3/m3, critical liquid soil moisture below which soil respiration is inhibited, used only if iresp_moist==1
+    psi_max     = -5.           ! m, matric potential above which no moisture limitation of soil respiration, used only if iresp_moist==2
+    psi_min     = -1000.        ! m, matric potential below which no soil respiration, used only if iresp_moist==2
+    heat_soc     = F            ! include the effect of heat generation by soil microbial decomposition?
+    k_ice        = 1.e4         ! yr, turnover time of carbon below ice sheets
+
+    !------------------------------------------------------------------------------------
+    ! burial of soil carbon
+    !------------------------------------------------------------------------------------
+    l_burial = F                ! allow for soil carbon burial? If false, carbon reaching the burial layer is released to the atmosphere
+
+    !------------------------------------------------------------------------------------
+    ! vertical soil carbon diffusivities
+    !------------------------------------------------------------------------------------
+    diff_bio   = 5e-4           ! m2/yr, bioturbation diffusivity, 1d-4 Braakheke
+    diff_cryo  = 5e-3           ! m2/yr, cryoturbation diffusivity, 5d-4 Koven 2009, 2013
+    diff_shelf = 5e-4           ! m2/yr, shelf carbon diffusivity
+    diff_lake  = 5e-4           ! m2/yr, below-lake carbon diffusivity
+    diff_ice   = 0.0            ! m2/yr, diffusivity of carbon below ice sheets
+    z_diff     = 100            ! m, e-folding depth for reduction of soil carbon diffusivity with depth
+    n_alt      = 3              ! multiple of active layer thickness where diffusivity of carbon goes to zero, 4 used in Uvic
+
+    !------------------------------------------------------------------------------------
+    ! vertical soil carbon advection velocities
+    !------------------------------------------------------------------------------------
+    iadv_soilc  = 0             ! soil carbon advection 
+                                ! 0 : no advection
+                                ! 1 : use dust deposition as sedimentation rate
+                                ! 2 : use constant and uniform value adv_soilc
+                                ! 3 : use dust deposition + constant and uniform value adv_soil
+    adv_soil  = 5e-5            ! m/yr, soil carbon advection (used only if iadv_soilc>=2)
+    adv_shelf = 0               ! m/yr, shelf carbon advection
+    adv_ice   = 0               ! m/yr, advection of carbon below ice sheets
+
+    !------------------------------------------------------------------------------------
+    ! peatland params
+    !------------------------------------------------------------------------------------
+    peat_carb    = T            ! include peatland carbon dynamics
+    peat_area    = T            ! include peatland dynamic area changes
+    nmonwet_peat  = 3           ! number of month fraction has to be inundated to become potential peatland
+    acroc_crit = 5.0            ! kgC/m2, critical acrotelm carbon content for catotelm formation rate, 7.5d0 Wania 2009
+    k10_acro = 15               ! yr, acrotelm decomposition time scale at 10 degC, 10 Spahni 2013, 15 Kleinen 2012
+    k10_cato = 1000             ! yr, catotelm decomposition time scale at 10 degC, 1000 Spahni 2013
+    k_acro_to_cato = 10.e-3     ! 1/yr, catotlem formation rate, 12.d-3 Wania 2009, 19.d-3 Kleinen 2012
+    peat_ch_rate = 0.01         ! 1/yr, rate of peat areal expansion or contraction, 0.01d0 Stocker 2014
+    dCpeat_dt_min = 5e-3        ! kgC/m2/yr, minimum peat carbon accumulation for peat establishment, 10.d-3 Stocker 2014
+    Cpeat_min = 1e4             ! kgC/m2, minimum peat carbon for peat survival, 50 in Stocker 2014
+
+    !------------------------------------------------------------------------------------
+    ! methane params
+    !------------------------------------------------------------------------------------
+    ich4_ftemp       = 2        ! temperature dependence of ch4 emission fraction. 1=Arrhenius, 2=q10
+    Ea_ch4           = 0.96     ! eV, activation energy for temperature dependence of ch4 emission fraction, 0.96 in Yvon-Durocher 2014 (only for ich4_ftemp=1)
+    q10_ch4          = 1.8      ! q10 for temperature dependence of ch4 emission fraction (only for ich4_ftemp==2)
+    ch4_frac_wet     = 0.0725   ! fraction of carbon emitted as methane from wetlands, Riley 2011 0.2, Spahni 2011 range 0.024-0.0415
+    ch4_frac_shelf   = 0.0      ! fraction of carbon emitted as methane from ocean shelf
+    ch4_frac_peat    = 0.0725   ! fraction of carbon emitted as methane from peatlands, Spahni 2011 range 0.2-0.25
+    ch4_frac_lake    = 0.0      ! fraction of carbon emitted as methane from lakes 
+
+    !------------------------------------------------------------------------------------
+    ! N2O emission params
+    !------------------------------------------------------------------------------------
+    k_n2o            = 5.e-7    ! kg N2O-N/m2/day, emission rate at 10 degC and 
+    q10_n2o          = 2.0      ! q10 for temperature dependence of N2O emission
+    theta_exp        = 3.0      ! power of emission dependence on relative soil moisture
+
+    !------------------------------------------------------------------------------------
+    ! vegetation params
+    !------------------------------------------------------------------------------------
+    iseed = 1                   ! seeds (only used if from restart), 1=seeds everywhere, 2=seed dispersal
+    seed_pft_min = 0.1          ! minimum pft fraction needed to seed neighbouring cells (only if iseed==2)
+    gamma_down = 0.             ! photosynthesis down-regulation parameter for high CO2, Arora and Scinocca 2016 eq. 11/12; 0.=no downregulation
+    lai_min = 1 1 0.1 0.1 1     ! minimum leaf area index for each PFT [m2/m2]
+    lai_max = 8. 6. 3. 4. 3     ! maximum leaf area index for each PFT [m2/m2]
+    c_lambda_co2 = 0.5          ! factor for lai dependence of NPP fraction used for spatial expansion. 0=constant lai_max, >0 CO2 adjusted lai_max
+    lambda_min = 0.1            ! minimum fraction of NPP used for spatial expansion []
+    lambda_max = 0.9            ! maximum fraction of NPP used for spatial expansion []
+    lambda_exp = 1.0            ! exponent of lai dependence of NPP fraction used for spatial expansion. 1=linear, 2=quadratic, 0.5=sqrt
+    delta_lai_conv = 1.e-10     ! critical LAI difference for convergence in iterative solver
+    i_roots     = 2             ! param of vertical root distribution: 1..JULES, 2..Jackson, 3..CLM
+    lroot_frac = T              ! adjust vertical root distribution so that all roots are in the active layer?
+    sla_bl  = 10.0              ! m2/(kg dry leaf), specific leaf area of broadleaf trees, TRY database
+    sla_nl  = 5.0               ! m2/(kg dry leaf), specific leaf area of needleleaf trees, TRY database
+    sla_c3  = 22.5              ! m2/(kg dry leaf), specific leaf area of C3 grass, TRY database
+    sla_c4  = 20.0              ! m2/(kg dry leaf), specific leaf area of C4 grass, TRY database
+    sla_sh  = 8.5               ! m2/(kg dry leaf), specific leaf area of shrubs, TRY database
+    z_veg_std_crit = 100.       ! m, critical sub-grid topography standard deviation for disturbance rate from ice sheets
+    gamma_phen = 15.            ! days, leaf senescence time scale
+    t_base_phen = 5. 2. 0. 5. 2.! degC, base temperature for phenology
+    gdd5_phen = 0. 600. 0. 0. 900.  ! K, growing degree above 5 degC threshold for decidous
+    t_cmon_phen = 5. -30. 0. 0. -40. ! degC, threshold coldest month temperature for decidous
+    t_cmon_min = -17. -999. -999. 15.5 -999. ! degC, minimum coldest month temperature for establishment
+    t_cmon_max = 999. -5. 999. 999. 999.    ! degC, maximum coldest month temperature for establishment
+    sai_scale    = 0.1          ! scale factor for calculation of stem area index from balanced leaf are index
+    veg_h_min = 0.3             ! m, minimum height of vegetation
+    hveg_z0_scale = 0.06 0.06 0.12 0.12 0.12         ! scaling from vegetation height to roughness length
+    f_lit_to_ice = 1.           ! fraction of vegetation carbon beeing buried under ice when ice sheets are expanding
+
+    !------------------------------------------------------------------------------------
+    ! vegetation disturbance rate
+    !------------------------------------------------------------------------------------
+    gamma_dist_tree = 0.007     ! 1/yr, minimum disturbance rate for trees
+    gamma_dist_grass = 0.05     ! 1/yr, minimum disturbance rate for grass
+    gamma_dist_shrub = 0.02     ! 1/yr, minimum disturbance rate for shrubs 
+    gamma_luc = 1.              ! 1/yr, disturbance rate for land use change
+    gamma_ice = 0.              ! 1/yr, disturbance rate from presence of ice sheets in grid cell
+    ! fire disturbance  
+    tau_fire = 10.              ! yr, fire disturbance time scale
+    i_fire = 1                  ! fire disturbance parameterisation:
+                                ! 1 = based on soil moisture
+                                ! 2 = based on cumulative water deficit and fuel availability
+    theta_fire_crit = 0.2       ! m3/m3, critical soil moisture for fire, Thonicke 2001 ~0.15-0.2, only for i_fire==1
+    k_cwd_fire = 0.04           ! 1/mm, slope parameter for CWD mortality sigmoid function, only for i_fire==2
+    cwd_0_fire = 200            ! mm, minimum CWD for fire disturbance, only for i_fire==2
+    fuel_min = 0.05             ! kgC/m2, minimum fuel for fire disturbance, only for i_fire==2
+    fuel_half = 0.1             ! kgC/m2, half-saturation fuel for fire disturbance, only for i_fire==2
+    !mort_fire = 0.7 0.7 0.15 0.15 0.4           ! PFT-speficic mortality from fire disturbance
+    mort_fire = 1.0 1.0 1.0 1.0 1.0          ! PFT-speficic mortality from fire disturbance
+
+    l_fire_co2_emissions = F    ! .true. = enable direct CO2 emissions from fire, .false. = turn off direct fire CO2 emissions
+    ! maximum cumulative water deficit (MCDW) disturbance
+    k_mcwd = 0.01               ! 1/mm, slope parameter for MCWD mortality sigmoid function
+    M_max = 0.                  ! 1/yr, maximum MCWD-induced tree mortality rate
+    ratio_mcwd = 0.3            ! ratio of MCWD to climatological MCWD when the mortality rate reaches 50% of M_max
+    i_mcwd_clim = 0             ! MCWD climatology source:
+                                ! 0 = use fixed mcwd_50_fixed value
+                                ! 1 = read from external nc file (mcwd_clim_file)
+                                ! 2 = read from restart file
+    mcwd_50_fixed = 400.0       ! mm, fixed mcwd_50 value (used if i_mcwd_clim=0)
+    mcwd_clim_file = "input/MCWD_climatology.nc"  ! MCWD climatology file (used if i_mcwd_clim=1)
+
+    i_deforest = 0              ! deforestation experiments:
+                                ! 0 .. no deforestation
+                                ! 1 .. conversion of all vegetation to bare soil/desert
+                                ! 2 .. conversion of forests to grasslands
+                                ! 3 .. conversion of forests to shrubland
+                                ! 4 .. conversion of grasslands to bare soil/desert
+
+    !------------------------------------------------------------------------------------
+    ! weathering
+    !------------------------------------------------------------------------------------
+    i_weathering = 2            ! chemical weathering model:
+                                ! 1 .. GEM-CO2 model
+                                ! 2 .. UHH PalMod model
+    i_weath_sc = 1              ! carbonate weathering model:
+                                ! 1 .. runoff-dependent model of Amiotte-Suchet 1995
+                                ! 2 .. runoff- and temperature-dependent model of Romero-Mujalli et al. (2019)
+    kweath_scale = 1.           ! scaling factor for carbonate and silicate weathering fluxes
+    l_river_export = F          ! enable export of land particulate and dissolved organic carbon through rivers?
+    lithology_gemco2_file = "input/GEM_CO2_lithology_5x5.nc"   ! lithology file for GEM-CO2 weathering model (used only if i_weathering==1)
+    lithology_uhh_file = "input/Lithology_pi_UHH.nc"           ! lithology file for UHH weathering model (used only if i_weathering==2)
+    kexport = 5e-7              ! rate of organic carbon export through rivers
+    l_match_alk_weath = F       ! scale weathering flux to match alkalinity input into the ocean?
+
+    !------------------------------------------------------------------------------------
+    ! soil properties params
+    !------------------------------------------------------------------------------------
+    ! spatial dependence of soil properties on soil texture
+    uniform_porosity       = T  ! use uniform porosity? If .true. value below is used
+    uniform_soil_par_therm = T  ! use uniform soil thermal parameters? If .true. values below are used
+    uniform_soil_par_hydro = T  ! use uniform soil hydrological parameters? If .true. values below are used
+    ! time dependence of soil properties on organic matter content
+    constant_porosity       = T ! use constant soil porosity? (either uniform of geographically varying)
+    constant_soil_par_therm = T ! use constant soil thermal parameters? (either uniform of geographically varying)
+    constant_soil_par_hydro = T ! use constant soil hydrological parameters? (either uniform of geographically varying)
+
+    lambda_s_u   = 5.0          ! W/m/K, uniform soil heat conductivity at saturation, 7.0 (3.2 - 8.5)  
+    lambda_dry_u = 0.20         ! w/m/K, uniform dry soil heat conductivity, 0.22 (0.18 - 0.27)
+    theta_sat_u  = 0.43         ! m3/m3, uniform porosity, 0.43 (0.37 - 0.49)
+    theta_field_u= 0.25         ! m3/m3, uniform field capacity, 0.25 (0.15 - 0.38)
+    theta_wilt_u = 0.1          ! m3/m3, uniform wilting point, 0.14 (0.05 - 0.3)
+    psi_sat_u    = -0.2         ! m, uniform matric potential at saturation, -0.19 (-0.71 - -0.05)
+    k_sat_u      = 100          ! kg/m2/day, uniform hydraulic conductivity at saturation, 520 (86 - 1900)
+    b_u          = 3            ! integer, unifrom Clapp-Horneberger parameter, 6 (4 - 14)
+
+    lnd_par_file    = "input/lnd_par.nc"
+    soil_texture = 1            ! which soil texture to use; 1...HWSD, 2...GSDE
+
+    !------------------------------------------------------------------------------------
+    ! choose what to write as output
+    !------------------------------------------------------------------------------------
+    write_surf     = T          ! write surface scheme output
+    write_surf_n   = T          ! write surface scheme output for each surface type
+    write_carbon   = T          ! write carbon output?
+    write_soil     = T          ! write soil output?
+    write_soil_par = F          ! write soil parameters output?
+    write_lake     = T          ! write lake output?
+    write_cons     = F          ! write conservation check?
+    l_daily_output = F          ! enable daily output?
+/

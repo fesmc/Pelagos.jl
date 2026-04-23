@@ -1,0 +1,264 @@
+&ocn_par
+
+ !-------------------------------------------------------------------------------------------
+ ! ocean initialisation settings
+ !-------------------------------------------------------------------------------------------
+ i_init = 2                   ! ocean T and S initialisation
+                              ! 1 = latitude dependent/uniform values 
+                              ! 2 = present day observations
+                              ! 3 = DeepMIP-type initial conditions, with uniform S=saln0 and T determined by init3_peak and init3_bg
+                              ! used only if not from restart (ocn_restart==F in control.nml)
+ init3_peak = 25.0            ! degC, peak temperature increase at the equator (relative to init3_bg), used only for i_init==3
+ init3_bg   = 15.0            ! degC, background temperature, used only for i_init==3
+
+ !-------------------------------------------------------------------------------------------
+ ! ocean grid settings
+ !-------------------------------------------------------------------------------------------
+ nlayers = 23                 ! number of ocean layers
+ levels =  0. 10. 25. 50. 100. 150. 200. 250. 300. 400. 500. 600. 800. 1000. 1250. 1500. 1750. 2000. 2500. 3000. 3500. 4000. 4500. 5000.
+ i_smooth = 1                 ! topography smoothing:
+                              ! 1 = smooth smooth_fac times in physical space
+                              ! 2 = smooth smooth_fac times in physical space, cos corrected weghting of dlat vs dlon
+                              ! 3 = smooth in Fourier space with smooth factor smooth_fac (values ~0.1 almost unsmoothed, values ~1 very sine like)
+ smooth_fac = 1               ! bathymetry smooth factor
+ i_isl = 1                    ! method to determine islands for barotropic flow:
+                              ! 0 = automatic
+                              ! 1 = specify specific islands (l_isl_ant, l_isl_aus, l_isl_grl, l_isl_ame), valid for present-day geography
+                              ! 2 = specify islands manually by defining number of islands
+ isl_area_min = 0.0           ! mln km2, minimum island area in order to be explicitly considered as an island for barotropic flow, used only if i_isl==0
+ l_isl_ant = T                ! is Antarctica considered an island for barotropic flow? Only for i_isl==1
+ l_isl_aus = T                ! is Australia considered an island for barotropic flow? Only for i_isl==1
+ l_isl_grl = F                ! is Greenland considered an island for barotropic flow? Only for i_isl==1
+ l_isl_ame = F                ! is America considered an island for barotropic flow? Only for i_isl==1
+ l_bering_flow = F            ! enable parameterisation for Bering Strait throughflow, following Goosse 1997 ?
+ c_bering = 0.2               ! factor to scale the Bering Strait throughflow, used only if l_bering_flow==T
+ n_isl = 3                    ! number of islands for barotropic flow, only for i_isl==2
+ lon_isl = 90  60 140         ! longitude of grid cell on islands, only for i_isl==2. 
+ lat_isl = 50 -85 -30         ! latitude of grid cell on islands, only for i_isl==2. 
+ shelf_depth = 200.           ! m, depth of ocean shelf
+ dbl = 50.                    ! m, depth of surface boundary layer
+
+ !-------------------------------------------------------------------------------------------
+ ! parameters for stability 
+ !-------------------------------------------------------------------------------------------
+ drhcor_max = 0.005           ! maximum inverse slope gradient for Coriolis term in barotropic streamfunction equation
+
+ !-------------------------------------------------------------------------------------------
+ ! velocity relaxation settings
+ !-------------------------------------------------------------------------------------------
+ urelax = 0.                  ! velocity under-relaxation parameter of Edwards and Shepherd (2001)
+
+ !-------------------------------------------------------------------------------------------
+ ! wind stress scaling settings
+ !-------------------------------------------------------------------------------------------
+ tau_scale = 1.               ! wind stress scaling factor 
+
+ !-------------------------------------------------------------------------------------------
+ ! friction settings
+ !-------------------------------------------------------------------------------------------
+ adrag = 4.                   ! days, inverse minimum drag
+ drag_topo_n = 2.             ! drag increase in shallow water regions. 0 = no increase; 1 = in 2x2 neighbours; 2 = in 2x2 and 4x4 neighbours
+ drag_topo_fac = 3.0          ! factor by which to increase drag in shallow water
+ drag_topo_scale_eq = 0.
+ z_drag_shallow = 1000.       ! m, depth of shallow water regions below which to increase adrag by factor drag_topo_fac
+ drag_frac_fac = 0.           ! factor by which to increase drag where small ocean fraction
+
+ !-------------------------------------------------------------------------------------------
+ ! Coriolis 
+ !-------------------------------------------------------------------------------------------
+ fcormin = 5.e-6              ! 1/s, minimum absolute value of Coriolis parameter
+
+ !-------------------------------------------------------------------------------------------
+ ! advection settings
+ !-------------------------------------------------------------------------------------------
+ i_advection = 2              ! advection parameterisation:
+                              ! 1 = linear weighted upstream/centred differences
+                              ! 2 = flux corrected transport scheme
+
+ !-------------------------------------------------------------------------------------------
+ ! diffusion settings
+ !-------------------------------------------------------------------------------------------
+ i_diff = 1                   ! diffusion schemes:
+                              ! 0 = horizontal/vertical diffusion
+                              ! 1 = isopycnal/diapycnal diffusion
+ l_diff33_impl = F            ! treat A33 term of diffusion matrix implicitely?
+ diff_iso = 1500              ! m2/s, isopycnal/horizontal diffusivity
+ diff_gm = 1500               ! m2/s, Gent-McWilliams eddy diffusion, used only if i_diff==1
+ i_diff_dia = 3               ! ocean diapycnal/vertical diffusivity profile:
+                              ! 0 = uniform with value diff_dia_min
+                              ! 1 = tuned Bryan-Lewis type profile
+                              ! 2 = Bryan-Lewis type profile as used in CLIMBER-2
+                              ! 3 = Bryan-Lewis type profile with diff_dia_min, diff_dia_max and reference depth diff_dia_zref
+                              ! 4 = vertical profile dependent on roughness at the ocean floor, Decloedt and Luther 2010
+ diff_dia_zref = 1000.        ! m2/s, diapycnal/vertical diffusivity (value at 2500m depth if not uniform)
+ diff_dia_ref = 2e-5          ! m2/s, reference diapycnal diffusivity, used only if l_diff_dia_strat==T
+ diff_dia_min = 1.e-5         ! m2/s, minimum (surface) diapycnal diffusivity, used only if i_diff_dia==0,3,4
+ diff_dia_max = 1.5e-4        ! m2/s, maximum (deep ocean) diapycnal diffusivity, used only if i_diff_dia==3
+ diff_dia_bgc_min = 1e-5      ! m2/s, minimum diapycnal diffusivity for DIC tracers
+ l_diff_dia_strat = F         ! use stratification dependent vertical diffusivity? Added on top of the reference profile set by i_diff_dia
+ alpha_strat = 1.0            ! exponent of Brunt-Vaisala frequency dependence for stratification dependent vertical diffusivity
+ brunt_vaisala_ref = 7.e-3    ! 1/s, reference Brunt-Vaisala frequency for stratification dependent vertical diffusivity.  (~drho/dz=-5e-3 kg/m3 /m)
+ slope_max = 1e-3             ! maximum slope of isoentropic surface for isoneutral diffusion
+
+ !-------------------------------------------------------------------------------------------
+ ! convection settings
+ !-------------------------------------------------------------------------------------------
+ i_conv_shuffle = 0           ! settings for shuffle convection of Mueller 2006, applied be the convection scheme:
+                              ! 0 = no shuffle convection applied
+                              ! 1 = shuffle convection applied everywhere
+                              ! 2 = shuffle convection applied only along the coast
+ l_conv_shuffle_passive = F   ! apply shuffle convection also to passive (including bgc) tracers? Used only if i_conv_shuffle>0
+ l_mix_bgc_all = T            ! apply vertical mixing to ALL bgc tracers (convection+mixed layer)?
+
+ !-------------------------------------------------------------------------------------------
+ ! mixed layer settings
+ !-------------------------------------------------------------------------------------------
+ l_mld = T                    ! use ocean mixed layer scheme?
+ pe_buoy_coeff = 0.1          ! mixed layer - efficiency of buoyancy-forced mixing (0.15 used in SEA model)
+ ke_tau_coeff = 2.5           ! coefficient for wind-forced mixing (value of 2.5 from S Roudesli tuning in isolation)
+ ke_wind_dec = 100.           ! m, e-folding depth-scale for decay of efficiency of wind-mixing 
+                              ! (100.0 used in SEA model; 25.0 from S Roudesli tuning in isolation)
+
+ !-------------------------------------------------------------------------------------------
+ ! equation of state 
+ !-------------------------------------------------------------------------------------------
+ i_eos = 3                    ! choice of equation of state:
+                              ! 0 = temperature and salinity dependence only
+                              ! 1 = with thermobaricity
+                              ! 2 = as in CLIMBER-2
+                              ! 3 = EOS80 equation of state, Millero and Poisson 1981, but only limited number of terms
+                              ! 4 = EOS80 equation of state, Millero and Poisson 1981, with all terms in the bulk secant modulus
+                              ! 5 = “stiffened” EOS derived from the compressibility of sea water and the UNESCO EOS80, following Ma 2020 
+
+ !-------------------------------------------------------------------------------------------
+ ! reference ocean water density 
+ !-------------------------------------------------------------------------------------------
+ rho0 = 1000.                 ! kg/m3 
+
+ !-------------------------------------------------------------------------------------------
+ ! settings for surface relaxation experiments 
+ !-------------------------------------------------------------------------------------------
+ tau_sst = 15                 ! days, relaxation time for surface temperature, used only if ocn_restore_temp==T in control.nml 
+ tau_sss = 15                 ! days, relaxation time for surface salinity, used only if ocn_restore_sal==T in control.nml 
+
+ !-------------------------------------------------------------------------------------------
+ ! salinity/runoff settings 
+ !-------------------------------------------------------------------------------------------
+ n_cells_dist_runoff = 3      ! number of cells over which to distribute runoff and basal melt (has to be < n_coast_cells in geo_par.nml)
+ n_cells_dist_calving = 3     ! number of cells over which to distribute calving (has to be < n_coast_cells in geo_par.nml)
+ n_cells_dist_weath = 3       ! number of cells over which to distribute weathering fluxes (has to be < n_coast_cells in geo_par.nml)
+ l_fw_corr = T                ! correct freshwater flux to ensure net zero freshwater flux into ocean?
+ l_fw_melt_ice_sep = F        ! treat freshwater to the ocean originating from ice sheet melt separately? 
+                              ! If ==T, fw is applied at the surface and salinity conservation is ensured by compensating uniformely over the whole ocean
+ i_fw = 2                     ! virtual salinity flux:
+                              ! 1 = virtual salinity flux using reference saln0
+                              ! 2 = virtual salinity flux using local salinity, compensate over the whole surface ocean to conserve salinity
+                              ! 3 = virtual salinity flux using local salinity
+ i_saln0 = 2                  ! treatment of reference salinity:
+                              ! 1 = use constant value saln0_const             
+                              ! 2 = use volume averaged salinity
+ saln0_const = 34.7           ! psu, reference salinity, used only if i_saln0==1
+ l_salinity_restore = F       ! restore salinity to globally integrated value saln0?
+ i_brines = 0                 ! treatment of brines during sea ice formation
+                              ! 0 = no special treatment of brine rejection
+                              ! 1 = brine rejection 
+                              ! 2 = brine rejection only along coastal cells
+ i_brines_z = 1                              
+ frac_brines = 0.
+ z_mix_brines = 100.          ! m, depth over which brines are mixed, only for i_brines>0
+ relax_run = 0.               ! relaxation factor for runoff from ice sheets: 0 = no relaxation, -> 1 = strong relaxation
+ relax_calv = 0.              ! relaxation factor for calving fluxes from ice sheets: 0 = no relaxation, -> 1 = strong relaxation
+ relax_bmelt = 0.             ! relaxation factor for basal melt fluxes from ice sheets: 0 = no relaxation, -> 1 = strong relaxation
+ scale_runoff_ice = 1.        ! scaling factor for runoff from ice sheets, used only if SMB model is enabled (flag_smb==T)
+ scale_calving_ice = 1.       ! scaling factor for runoff from ice sheets, used only if ice sheets are interactive (flag_ice==T)
+ i_scale_dhdt_ice = 0         ! scaling of freshwater flux from changes in ice sheet thickness:
+                              ! 0 = constant scaling factor scale_dhdt_ice
+                              ! 1 = time-dependent scaling factor read from scale_dhdt_ice_file
+ scale_dhdt_ice = 1.          ! scaling factor for freshwater flux from changes in ice sheet thickness, only used if ice sheet evolution is prescribed (ifake_ice==T) and i_scale_dhdt_ice==0
+ scale_dhdt_ice_file = "input/scale_dhdt_ice.nc"    ! use only if i_scale_dhdt_ice==1
+
+ !-------------------------------------------------------------------------------------------
+ ! additional tracers
+ !-------------------------------------------------------------------------------------------
+ age_tracer  = T              ! add age tracer? 
+ dye_tracer  = T              ! add dye tracer (NH/SH)?
+ cons_tracer = F              ! add conservative tracer?
+ l_cfc       = F              ! add CFC11 and CFC12 tracers?
+
+ !-------------------------------------------------------------------------------------------
+ ! freshwater hosing settings
+ !-------------------------------------------------------------------------------------------
+ l_hosing = F                 ! apply additional freshwater hosing?
+ hosing_domain_name = 'Atl_50-70N_0.1Sv'   ! list of domains where hosing should be applied; need to be defined in hosing.nml
+ hosing_comp_basin = 2        ! ocean basin where to compensate the hosing freshwater. -1 = no comp, 0 = Global, 1 = Atlantic, 2 = Pacific, 3 = Southern Ocean
+ lat_min_hosing_comp = -30    ! lower latitude bound for region of freshwater flux compensation (used only if hosing_comp_basin>0)
+ lat_max_hosing_comp = 30     ! higher latitude bound for region of freshwater flux compensation (used only if hosing_comp_basin>0)
+ lon_min_hosing_comp = -180   ! western longitude bound for region of freshwater flux compensation (used only if hosing_comp_basin>0)
+ lon_max_hosing_comp = 180    ! eastern longitude bound for region of freshwater flux compensation (used only if hosing_comp_basin>0)
+
+ !-------------------------------------------------------------------------------------------
+ ! freshwater adjustment settings
+ !-------------------------------------------------------------------------------------------
+ l_flux_adj_atl = F           ! apply freshwater adjustment in the Atlantic?
+ flux_adj_atl   = 0.          ! Sv, freshwater adjustment
+ lat_min_flux_adj_atl = 50    ! lower Atlantic latitude bound for region of freshwater adjustment
+ lat_max_flux_adj_atl = 70    ! higher Atlantic latitude bound for region of freshwater adjustment
+ l_flux_adj_ant = F           ! apply freshwater adjustment around Antarctica?
+ flux_adj_ant   = 0.          ! Sv, freshwater adjustment
+ nj_flux_adj_ant = 1
+ l_flux_adj_pac = F           ! apply freshwater adjustment in the Pacific?
+ flux_adj_pac   = 0.          ! Sv, freshwater adjustment
+ lat_min_flux_adj_pac = 40    ! lower Pacific latitude bound for region of freshwater adjustment
+ lat_max_flux_adj_pac = 60    ! higher Pacific latitude bound for region of freshwater adjustment
+
+ !-------------------------------------------------------------------------------------------
+ ! noise  
+ !-------------------------------------------------------------------------------------------
+ l_noise_fw = F               ! apply noise to surface freshwater flux?
+ is_fw_noise_Sv = F           ! is the freshwater flux noise in Sv?
+ l_noise_flx = F              ! apply noise to surface heat flux?
+ i_noise = 1                  ! noise type:
+                              ! 1 = Gaussian white noise with standard deviation noise_amp_*
+                              ! 2 = red noise
+                              ! 3 = periodic forcing
+ l_noise_only_coast = F       ! apply noise only along coastal cells?
+ noise_basin = 1              ! ocean basin where to apply noise. 1 = Atlantic, 2 = Pacific, 3 = Southern Ocean
+ noise_amp_fw = 0.5           ! kg/m2/day (or Sv if is_fw_noise_Sv==T), amplitude (or standard deviation of Gaussian) for freshwater flux noise
+ noise_amp_flx = 10.          ! W/m2, amplitude (or standard deviation of Gaussian) for heat flux noise
+ noise_autocorr = 0.5         ! lag-1 autocorrelation of red noise, used only if i_noise==2
+ noise_period = 10.           ! years, period of periodic noise, used only if i_noise==3
+ lat_min_noise = 50           ! lower latitude bound for noise region 
+ lat_max_noise = 80           ! higher latitude bound for noise region 
+ lon_min_noise = -175         ! western longitude bound for noise region 
+ lon_max_noise = 175          ! eastern longitude bound for noise region
+
+ !-------------------------------------------------------------------------------------------
+ ! for surface buoyancy flux diagnostics
+ !-------------------------------------------------------------------------------------------
+ i_fwf_buoy = 1
+ i_alphabeta = 1
+ depth_buoy = 100.
+
+ !-------------------------------------------------------------------------------------------
+ ! fixed boundary conditions settings
+ !-------------------------------------------------------------------------------------------
+ l_ocn_fix_wind = F           ! used prescribed wind stress daily climatology?
+ l_ocn_fix_fw   = F           ! used prescribed surface freshwater flux daily climatology?
+ l_ocn_fix_flx  = F           ! used prescribed surface heat flux daily climatology?
+ i_ocn_input_fix = 1          ! what fixed ocean input to use, only if any l_ocn_fix_*==T : 
+                              ! 1 = average of first 30 years of simulation
+                              ! 2 = read from file ocn_input_fix_file
+ l_ocn_input_fix_write = F    ! write average daily ocean input variables from last 30 years of simulation to file?
+ ocn_input_fix_file = "input/ocn_input_fix_pi.nc"     ! file with daily climatology of ocean input fields to be used for simulations with any l_ocn_fix_*==T
+
+ !-------------------------------------------------------------------------------------------
+ ! geothermal heat flux
+ !-------------------------------------------------------------------------------------------
+ l_q_geo = T                  ! apply geothermal heat flux at ocean floor?  
+
+ !-------------------------------------------------------------------------------------------
+ ! control of ocean model output 
+ !-------------------------------------------------------------------------------------------
+ l_daily_output = F           ! enable daily output?
+ l_output_extended = F        ! enable extended ocean output?
+/

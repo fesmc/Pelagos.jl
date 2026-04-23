@@ -1,0 +1,547 @@
+&NH-80KM
+  grid_name      = NH-80KM
+  grid_type      = polar_stereographic
+  grid_dx        = 80.0
+  grid_nx        = 157
+  grid_ny        = 157
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NH-64KM
+  grid_name      = NH-64KM
+  grid_type      = polar_stereographic
+  grid_dx        = 64.0
+  grid_nx        = 196
+  grid_ny        = 196
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NHr-64KM
+  grid_name      = NHr-64KM
+  grid_type      = polar_stereographic
+  grid_dx        = 64.0
+  grid_nx        = 173
+  grid_ny        = 173
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NH-40KM
+  grid_name      = NH-40KM
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 313
+  grid_ny        = 313
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NH-32KM
+  grid_name      = NH-32KM
+  grid_type      = polar_stereographic
+  grid_dx        = 32.0
+  grid_nx        = 391
+  grid_ny        = 391
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NHr-32KM
+  grid_name      = NHr-32KM
+  grid_type      = polar_stereographic
+  grid_dx        = 32.0
+  grid_nx        = 345
+  grid_ny        = 345
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NH-20KM
+  grid_name      = NH-20KM
+  grid_type      = polar_stereographic
+  grid_dx        = 20.0
+  grid_nx        = 625
+  grid_ny        = 625
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0 
+  grid_phi       = 70.0 
+/
+
+&NH-16KM
+  grid_name      = NH-16KM
+  grid_type      = polar_stereographic
+  grid_dx        = 16.0
+  grid_nx        = 781
+  grid_ny        = 781
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0 
+  grid_phi       = 70.0 
+/
+
+&NHr-16KM
+  grid_name      = NHr-16KM
+  grid_type      = polar_stereographic
+  grid_dx        = 16.0
+  grid_nx        = 689
+  grid_ny        = 689
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0  
+/
+
+&NH-10KM
+  grid_name      = NH-10KM
+  grid_type      = polar_stereographic
+  grid_dx        = 10.0
+  grid_nx        = 1249
+  grid_ny        = 1249
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0 
+  grid_phi       = 70.0 
+/
+
+&NH-8KM
+  grid_name      = NH-8KM
+  grid_type      = polar_stereographic
+  grid_dx        = 8.0
+  grid_nx        = 1561
+  grid_ny        = 1561
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0 
+  grid_phi       = 70.0 
+/
+
+&NHr-8KM
+  grid_name      = NHr-8KM
+  grid_type      = polar_stereographic
+  grid_dx        = 8.0
+  grid_nx        = 1377
+  grid_ny        = 1377
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = -45.0 
+  grid_phi       = 70.0 
+/
+
+&SH-40KM
+  grid_name      = SH-40KM
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 313
+  grid_ny        = 313
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -70.0  
+/
+
+&SH-20KM
+  grid_name      = SH-20KM
+  grid_type      = polar_stereographic
+  grid_dx        = 20.0
+  grid_nx        = 625
+  grid_ny        = 625
+  grid_x0        = -6240.0    
+  grid_y0        = -6240.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -70.0  
+/
+
+&ANT-80KM
+  grid_name      = ANT-80KM
+  grid_type      = polar_stereographic
+  grid_dx        = 80.0
+  grid_nx        = 76
+  grid_ny        = 76
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-64KM
+  grid_name      = ANT-64KM
+  grid_type      = polar_stereographic
+  grid_dx        = 64.0
+  grid_nx        = 96
+  grid_ny        = 96
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-40KM
+  grid_name      = ANT-40KM
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 152
+  grid_ny        = 152
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-32KM
+  grid_name      = ANT-32KM
+  grid_type      = polar_stereographic
+  grid_dx        = 32.0
+  grid_nx        = 191
+  grid_ny        = 191
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-20KM
+  grid_name      = ANT-20KM
+  grid_type      = polar_stereographic
+  grid_dx        = 20.0
+  grid_nx        = 304
+  grid_ny        = 304
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-16KM
+  grid_name      = ANT-16KM
+  grid_type      = polar_stereographic
+  grid_dx        = 16.0
+  grid_nx        = 381
+  grid_ny        = 381
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-10KM
+  grid_name      = ANT-10KM
+  grid_type      = polar_stereographic
+  grid_dx        = 10.0
+  grid_nx        = 608
+  grid_ny        = 608
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&ANT-8KM
+  grid_name      = ANT-8KM
+  grid_type      = polar_stereographic
+  grid_dx        = 8.0
+  grid_nx        = 761
+  grid_ny        = 761
+  grid_x0        = -3040.0    
+  grid_y0        = -3040.0    
+  grid_lambda    = 0.0  
+  grid_phi       = -71.0  
+/
+
+&GRL-2KM
+  grid_name      = GRL-2KM
+  grid_type      = polar_stereographic
+  grid_dx        = 2.0
+  grid_nx        = 844
+  grid_ny        = 1444
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-4KM
+  grid_name      = GRL-4KM
+  grid_type      = polar_stereographic
+  grid_dx        = 4.0
+  grid_nx        = 422
+  grid_ny        = 722
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-8KM
+  grid_name      = GRL-8KM
+  grid_type      = polar_stereographic
+  grid_dx        = 8.0
+  grid_nx        = 211
+  grid_ny        = 361
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-16KM
+  grid_name      = GRL-16KM
+  grid_type      = polar_stereographic
+  grid_dx        = 16.0
+  grid_nx        = 106
+  grid_ny        = 182
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-32KM
+  grid_name      = GRL-32KM
+  grid_type      = polar_stereographic
+  grid_dx        = 32.0
+  grid_nx        = 53
+  grid_ny        = 91
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-64KM
+  grid_name      = GRL-64KM
+  grid_type      = polar_stereographic
+  grid_dx        = 64.0
+  grid_nx        = 27
+  grid_ny        = 46
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-5KM
+  grid_name      = GRL-5KM
+  grid_type      = polar_stereographic
+  grid_dx        = 5.0
+  grid_nx        = 336
+  grid_ny        = 600
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-10KM
+  grid_name      = GRL-10KM
+  grid_type      = polar_stereographic
+  grid_dx        = 10.0
+  grid_nx        = 168
+  grid_ny        = 300
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-20KM
+  grid_name      = GRL-20KM
+  grid_type      = polar_stereographic
+  grid_dx        = 20.0
+  grid_nx        = 84
+  grid_ny        = 150
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-40KM
+  grid_name      = GRL-40KM
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 42
+  grid_ny        = 75
+  grid_x0        = -720.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-PAL-16KM
+  grid_name      = GRL-PAL-16KM
+  grid_type      = polar_stereographic
+  grid_dx        = 16.0
+  grid_nx        = 146
+  grid_ny        = 182
+  grid_x0        = -1360.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&GRL-PAL-32KM
+  grid_name      = GRL-PAL-32KM
+  grid_type      = polar_stereographic
+  grid_dx        = 32.0
+  grid_nx        = 74
+  grid_ny        = 91
+  grid_x0        = -1360.0    
+  grid_y0        = -3450.0    
+  grid_lambda    = -45.0  
+  grid_phi       = 70.0   
+/
+
+&SCD-10KM
+  grid_name      = SCD-10KM
+  grid_type      = stereographic
+  grid_dx        = 10.0
+  grid_nx        = 90
+  grid_ny        = 55
+  grid_x0        = -450.0    
+  grid_y0        = -270.0    
+  grid_lambda    = 10.5  
+  grid_phi       = 46.0  
+  grid_alpha     = 2.5  
+/
+
+&EU-10KM
+  grid_name      = EU-10KM
+  grid_type      = stereographic
+  grid_dx        = 10.0
+  grid_nx        = 445
+  grid_ny        = 445
+  grid_x0        = -2000.0    
+  grid_y0        = -2000.0    
+  grid_lambda    = 10.0
+  grid_phi       = 50.0
+  grid_alpha     = 20.0       
+/
+
+&EU-5KM
+  grid_name      = EU-5KM
+  grid_type      = stereographic
+  grid_dx        = 5.0
+  grid_nx        = 890
+  grid_ny        = 890
+  grid_x0        = -2000.0    
+  grid_y0        = -2000.0    
+  grid_lambda    = 10.0
+  grid_phi       = 50.0
+  grid_alpha     = 20.0       
+/
+
+&NA-80KM
+  grid_name      = NA-80KM
+  grid_type      = stereographic
+  grid_dx        = 80.0
+  grid_nx        = 75
+  grid_ny        = 57
+  grid_x0        = -3000.0    
+  grid_y0        = -3000.0    
+  grid_lambda    = -100.0
+  grid_phi       = 60.0
+  grid_alpha     = 20.0       
+/
+
+&ALPS-1KM
+  grid_name      = ALPS-1KM
+  grid_type      = stereographic
+  grid_dx        = 1.0
+  grid_nx        = 900
+  grid_ny        = 550
+  grid_x0        = -450.0    
+  grid_y0        = -270.0    
+  grid_lambda    = 10.5  
+  grid_phi       = 46.0  
+  grid_alpha     = 2.5  
+/
+
+&ALPS-2KM
+  grid_name      = ALPS-2KM
+  grid_type      = stereographic
+  grid_dx        = 2.0
+  grid_nx        = 450
+  grid_ny        = 275
+  grid_x0        = -450.0    
+  grid_y0        = -270.0    
+  grid_lambda    = 10.5  
+  grid_phi       = 46.0  
+  grid_alpha     = 2.5  
+/
+
+&ALPS-10KM
+  grid_name      = ALPS-10KM
+  grid_type      = stereographic
+  grid_dx        = 10.0
+  grid_nx        = 90
+  grid_ny        = 55
+  grid_x0        = -450.0    
+  grid_y0        = -270.0    
+  grid_lambda    = 10.5  
+  grid_phi       = 46.0  
+  grid_alpha     = 2.5  
+/
+
+&NH-40KM-Pangea-300Ma
+  grid_name      = NH-40KM-Pangea-300Ma
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 450
+  grid_ny        = 450
+  grid_x0        = -9000.0
+  grid_y0        = -9000.0
+  grid_lambda    = 0.0
+  grid_phi       = 70.0
+/
+
+&SH-40KM-Pangea-300Ma
+  grid_name      = SH-40KM-Pangea-300Ma
+  grid_type      = polar_stereographic
+  grid_dx        = 40.0
+  grid_nx        = 680
+  grid_ny        = 680
+  grid_x0        = -13600.0
+  grid_y0        = -13600.0
+  grid_lambda    = 0.0
+  grid_phi       = -70.0
+/
+
+&NH-80KM-Pangea-300Ma
+  grid_name      = NH-80KM-Pangea-300Ma
+  grid_type      = polar_stereographic
+  grid_dx        = 80.0
+  grid_nx        = 225
+  grid_ny        = 225
+  grid_x0        = -9000.0
+  grid_y0        = -9000.0
+  grid_lambda    = 60.0
+  grid_phi       = 90.0
+/
+
+&SH-80KM-Pangea-300Ma
+  grid_name      = SH-80KM-Pangea-300Ma
+  grid_type      = polar_stereographic
+  grid_dx        = 80.0
+  grid_nx        = 225
+  grid_ny        = 225
+  grid_x0        = -9000.0
+  grid_y0        = -9000.0
+  grid_lambda    = 0.0
+  grid_phi       = -90.0
+/
+
