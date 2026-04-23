@@ -18,7 +18,7 @@ using Pelagos.Parameters: K_BG, K_DEEP, K_DEEP_ZREF
         @test isapprox(kappa_half, (K_BG + K_DEEP) / 2, rtol=1e-10)
 
         kappa_deep = bryan_lewis_kappa(-1e6)
-        @test isapprox(kappa_deep, K_DEEP, rtol=1e-4)
+        @test isapprox(kappa_deep, K_DEEP, rtol=1e-3)   # atan(1e6/1e3) ≈ π/2 - 0.001, ~0.06% error
 
         # Monotonically increasing with depth
         depths = [0.0, -200.0, -500.0, -1000.0, -2000.0, -5000.0]

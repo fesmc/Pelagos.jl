@@ -57,6 +57,7 @@ function build_climberx_grid(arch = CPU(); restart_file::String)
         latitude  = (-90,   90),
         z         = zw,          # 24 interfaces, already bottom→top
         topology  = (Periodic, Bounded, Bounded),
+        halo      = (4, 4, 4),   # IsopycnalSkewSymmetricDiffusivity requires halo ≥ 4
     )
 
     return ImmersedBoundaryGrid(underlying_grid, GridFittedBottom(bottom_height))

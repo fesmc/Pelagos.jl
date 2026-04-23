@@ -4,13 +4,17 @@
 # determined by integrating the continuity equation upward from the ocean floor
 # (w = 0 at bathymetry):
 #
-#   w[k] = w[k+1] - (∂u/∂x + ∂v/∂y)·Δz[k]    (k from bottom to surface)
+#   w[k+1] = w[k] - (∂u/∂x + ∂v/∂y)·Δz[k]   (k = 1 → nz, bottom-to-top)
 #
-# The rigid-lid constraint requires w[1] (top of surface layer) ≈ 0.
-# If |w_surface| > 1e-12 m/s, there is a barotropic solve error.
+# Array conventions (same as Oceananigans and the rest of this project):
+#   - Layer k=1 is the deepest (bottom), k=nz is the shallowest (surface).
+#   - w is on W-points (vertical cell faces), positive upward.
+#   - w[:,:,1]    = 0   at bathymetry  (bottom face of layer 1)
+#   - w[:,:,nz+1] ≈ 0   at sea surface (rigid-lid constraint)
 #
-# Grid convention: w on W-points (vertical cell faces), positive upward.
-# Metric factors on the sphere: ∂u/∂x → (1/a·cosφ)·∂u/∂λ, ∂v/∂y → (1/a)·∂v/∂φ.
+# Metric factors on the sphere:
+#   ∂u/∂x → (u_east - u_west) / (a·cosφ·Δλ)
+#   ∂(v·cosφ)/∂y / cosφ → (v_N·cosφ_N - v_S·cosφ_S) / (a·Δφ·cosφ)
 
 module Continuity
 
@@ -24,16 +28,17 @@ export diagnose_w!, diagnose_w
 Compute vertical velocity from depth-integrated continuity.
 
 # Arguments
-- `w`         : output vertical velocity (nlon, nlat, nz+1), m s⁻¹, on W-points
-                 w[:,:,1] = surface (rigid lid → ≈0), w[:,:,nz+1] = bottom = 0
-- `u`         : zonal velocity (nlon, nlat, nz), m s⁻¹
-- `v`         : meridional velocity (nlon, nlat, nz), m s⁻¹
-- `dx`        : zonal grid spacing (nlat,), m (at u-point latitudes)
-- `dy_v`      : meridional grid spacing at v-points, m (scalar, uniform assumed)
-- `cos_lat`   : cos(latitude) at T-point centres (nlat,)
-- `dz`        : layer thicknesses (nz,), m
+- `w`         : output (nlon, nlat, nz+1), m s⁻¹, on W-points
+                 w[:,:,1] = 0 (bathymetry); w[:,:,nz+1] ≈ 0 (rigid lid)
+- `u`         : zonal velocity (nlon, nlat, nz), m s⁻¹, east-face C-grid, k=1=deepest
+- `v`         : meridional velocity (nlon, nlat, nz), m s⁻¹, north-face of each T-cell,
+                 k=1=deepest; v[:,j,:] is the velocity at the north face of T-cell j
+- `dx`        : zonal grid spacing (nlat,), m, at T-cell centre latitudes
+- `dy_v`      : meridional grid spacing, m (scalar, assumed uniform)
+- `cos_lat`   : cos(latitude) at T-cell centres (nlat,)
+- `dz`        : layer thicknesses (nz,), m, dz[1]=deepest layer thickness
 - `ocean_mask`: Bool (nlon, nlat)
-- `debug`     : if true, assert that surface w is below 1e-10 m s⁻¹
+- `debug`     : if true, assert surface w < 1×10⁻¹⁰ m s⁻¹ (rigid-lid check)
 """
 function diagnose_w!(w         ::AbstractArray{Float64,3},
                      u         ::AbstractArray{Float64,3},
@@ -45,35 +50,33 @@ function diagnose_w!(w         ::AbstractArray{Float64,3},
                      ocean_mask::AbstractMatrix{Bool};
                      debug::Bool = false)
     nlon, nlat, nz = size(u)
-    fill!(w, 0.0)
+    fill!(w, 0.0)   # w[:,:,1] = 0 at bathymetry; all faces zeroed for land
 
-    # Integrate from bottom (k = nz) upward to surface (k = 1)
-    # w[:,:,nz+1] = 0  (bottom, already set)
-    @inbounds for k in nz:-1:1
-        dzk  = dz[k]
+    # Integrate upward from k=1 (deepest layer) to k=nz (shallowest layer).
+    # Continuity: ∂u/∂x + ∂v/∂y + ∂w/∂z = 0
+    #   → w_top - w_bottom = -(du_dx + dv_dy) · Δz
+    #   → w[i,j,k+1] = w[i,j,k] - (du_dx + dv_dy) · dz[k]
+    @inbounds for k in 1:nz
+        dzk = dz[k]
         for j in 1:nlat
             dxj    = dx[j]
             cosφ_j = cos_lat[j]
-            # cosφ at v-face (between j and j+1): approximate as average
             cosφ_N = j < nlat ? 0.5*(cos_lat[j] + cos_lat[j+1]) : 0.0
             cosφ_S = j >    1 ? 0.5*(cos_lat[j] + cos_lat[j-1]) : 0.0
 
             for i in 1:nlon
                 ocean_mask[i, j] || continue
-                ip1 = mod1(i+1, nlon)
+                # u[i,j,k] is the east-face velocity of cell (i,j).
+                # West face of cell i = east face of cell i-1 (periodic).
+                du_dx = (u[i, j, k] - u[mod1(i-1, nlon), j, k]) / dxj
 
-                # ∂u/∂x: (u[i+½,j,k] - u[i-½,j,k]) / dx
-                # u is stored on east face: u[i,j,k] ≡ u at east face of cell (i,j)
-                du_dx = (u[i, j, k] - u[mod1(i-1,nlon), j, k]) / dxj
-
-                # ∂(v·cosφ)/∂y: metric factor for sphere
-                vN = j < nlat ? v[i, j, k]   : 0.0
+                # v[i,j,k] is the north-face velocity of T-cell j.
+                # South face of cell j = north face of cell j-1 = v[i,j-1,k].
+                vN = j < nlat ? v[i, j,   k] : 0.0
                 vS = j >    1 ? v[i, j-1, k] : 0.0
-                # v[i,j,k] is on the north face of cell (i,j)
                 dv_dy = (vN * cosφ_N - vS * cosφ_S) / (dy_v * cosφ_j)
 
-                # Upward integration: w(top of k) = w(bottom of k) + divergence·Δz
-                w[i, j, k] = w[i, j, k+1] + (du_dx + dv_dy) * dzk
+                w[i, j, k+1] = w[i, j, k] - (du_dx + dv_dy) * dzk
             end
         end
     end
@@ -81,14 +84,14 @@ function diagnose_w!(w         ::AbstractArray{Float64,3},
     if debug
         for j in 1:nlat, i in 1:nlon
             ocean_mask[i, j] || continue
-            @assert abs(w[i, j, 1]) < 1e-10 "Rigid-lid violation: w_surface[$(i),$(j)] = $(w[i,j,1])"
+            @assert abs(w[i, j, nz+1]) < 1e-10 "Rigid-lid violation: w_surface[$i,$j] = $(w[i,j,nz+1])"
         end
     end
     return w
 end
 
 """
-    diagnose_w(u, v, dx, dy_v, cos_lat, dz, ocean_mask; debug=false)
+    diagnose_w(u, v, dx, dy_v, cos_lat, dz, ocean_mask; debug=false) -> w
 
 Allocating version of `diagnose_w!`. Returns w (nlon, nlat, nz+1).
 """

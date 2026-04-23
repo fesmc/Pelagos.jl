@@ -28,7 +28,7 @@ using NCDatasets
 
 export write_restart, read_restart
 export load_climberx_restart, load_climberx_forcing
-export bgrid_u_to_cgrid, bgrid_v_to_cgrid
+export bgrid_u_to_cgrid, bgrid_v_to_cgrid, bgrid_w_to_cgrid
 
 # ── Pelagos native restart ─────────────────────────────────────────────────────
 
@@ -172,6 +172,33 @@ function bgrid_v_to_cgrid(v_B::AbstractArray{Float64,3})
         v_C[i, :, k] = (v_B[i, :, k] .+ v_B[i_next, :, k]) ./ 2
     end
     return v_C
+end
+
+"""
+    bgrid_w_to_cgrid(w_B) -> w_C
+
+Convert vertical velocity from CLIMBER-X B-grid corners (73, 37, nz) to
+Oceananigans C-grid vertical-face positions (72, 36, nz+1).
+
+w_B[:,:,k] is interpreted as the upward velocity at the top face of layer k.
+The bottom face (k=0, bathymetry) is set to zero; the Oceananigans convention
+is w[:,:,1] at the bottom face of layer 1.
+"""
+function bgrid_w_to_cgrid(w_B::AbstractArray{Float64,3})
+    nlon1, nlat1, nz = size(w_B)   # (73, 37, 23)
+    nlon = nlon1 - 1                # 72
+    nlat = nlat1 - 1                # 36
+    # Average from B-grid corners to T-points (4-point box average).
+    w_C_h = similar(w_B, nlon, nlat, nz)
+    @inbounds for k in 1:nz, j in 1:nlat, i in 1:nlon
+        i2 = mod1(i + 1, nlon1)
+        w_C_h[i, j, k] = (w_B[i,  j,   k] + w_B[i2, j,   k] +
+                           w_B[i,  j+1, k] + w_B[i2, j+1, k]) * 0.25
+    end
+    # Pad: prepend zero bottom face so output has nz+1 vertical levels.
+    w_C = zeros(Float64, nlon, nlat, nz + 1)
+    w_C[:, :, 2:end] .= w_C_h
+    return w_C
 end
 
 end # module Restarts

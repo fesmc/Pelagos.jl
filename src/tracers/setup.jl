@@ -92,8 +92,7 @@ function build_tracer_model(grid;
     boundary_conditions = (T = T_bcs, S = S_bcs)
 
     # ── Build model ────────────────────────────────────────────────────────────
-    model = HydrostaticFreeSurfaceModel(;
-        grid,
+    model = HydrostaticFreeSurfaceModel(grid;
         velocities,
         closure,
         buoyancy,
@@ -132,7 +131,10 @@ function update_velocities!(model,
                             u_C::AbstractArray{Float64,3},
                             v_C::AbstractArray{Float64,3},
                             w  ::AbstractArray{Float64,3})
-    interior(model.velocities.u) .= u_C
+    # u_C is (Nx+1, Ny, Nz) on the B-grid; on a Periodic grid the last λ-face
+    # wraps to face 1, so interior() only expects (Nx, Ny, Nz).
+    Nx = size(interior(model.velocities.u), 1)
+    interior(model.velocities.u) .= u_C[1:Nx, :, :]
     interior(model.velocities.v) .= v_C
     interior(model.velocities.w) .= w
     return nothing

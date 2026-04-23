@@ -48,8 +48,8 @@ using Pelagos.Continuity: diagnose_w, diagnose_w!
         mask = fill(true, nlon, nlat)
 
         w = diagnose_w(u, v, dx, dy, cos_lat, dz, mask)
-        # Bottom face (k = nz+1) must be exactly zero
-        @test all(w[:, :, end] .== 0.0)
+        # Bottom face (k = 1) must be exactly zero (w=0 at bathymetry)
+        @test all(w[:, :, 1] .== 0.0)
     end
 
     @testset "In-place and allocating versions agree" begin
