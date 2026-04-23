@@ -38,8 +38,10 @@ using .Continuity
 # ── Grid utilities ─────────────────────────────────────────────────────────────
 include("grid/bathymetry.jl")
 include("grid/masks.jl")
+include("grid/setup.jl")
 using .Bathymetry
 using .Masks
+using .GridSetup
 
 # ── Forcing ────────────────────────────────────────────────────────────────────
 include("forcing/surface.jl")
@@ -75,6 +77,7 @@ export detect_islands, IslandInfo
 # Grid
 export smooth_bathymetry, load_bathymetry_nc
 export build_ocean_mask, build_velocity_mask, build_tracer_mask
+export build_climberx_grid
 # Forcing
 export virtual_salinity_flux!, apply_global_salt_correction!, heat_flux_bc
 export geothermal_tendency, uniform_geothermal
@@ -84,5 +87,6 @@ export convective_adjustment_closure
 export build_tracer_model, update_velocities!
 # I/O
 export write_snapshot, write_restart, read_restart
+export load_climberx_restart, load_climberx_forcing, bgrid_u_to_cgrid, bgrid_v_to_cgrid
 
 end # module Pelagos

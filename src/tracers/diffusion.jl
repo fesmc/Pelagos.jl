@@ -9,7 +9,7 @@
 module Diffusion
 
 using Oceananigans.TurbulenceClosures
-using ..Parameters: K_ISO, K_GM, SLOPE_MAX, K_BG, K_DEEP, K_DEEP_ALPHA, K_DEEP_ZREF
+using ..Parameters: K_ISO, K_GM, SLOPE_MAX, K_BG, K_DEEP, K_DEEP_ZREF
 
 export gm_redi_closure, diapycnal_closure, bryan_lewis_kappa
 
@@ -18,13 +18,15 @@ export gm_redi_closure, diapycnal_closure, bryan_lewis_kappa
 
 Bryan & Lewis (1979) diapycnal diffusivity profile.
 
-κ_d(z) = K_BG + (K_DEEP − K_BG) · (2/π) · arctan(α·(|z| − z_ref))
+    κ(z) = K_BG + (K_DEEP − K_BG) · (2/π) · arctan(|z| / K_DEEP_ZREF)
+
+κ(0) = K_BG (surface minimum); κ → K_DEEP as z → −∞.
+K_DEEP_ZREF is the half-saturation depth where κ = (K_BG + K_DEEP) / 2.
 
 Returns κ in m² s⁻¹. `z` is depth in metres, negative downward.
 """
 @inline function bryan_lewis_kappa(z::Float64)::Float64
-    depth = abs(z)
-    return K_BG + (K_DEEP - K_BG) * (2.0/π) * atan(K_DEEP_ALPHA * (depth - K_DEEP_ZREF))
+    return K_BG + (K_DEEP - K_BG) * (2.0/π) * atan(abs(z) / K_DEEP_ZREF)
 end
 
 """

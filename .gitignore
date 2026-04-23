@@ -1,4 +1,5 @@
 /Manifest*.toml
 /docs/build/
 /docs/Manifest.toml
-input
+# CLIMBER-X input data (large files, symlinked locally)
+climber-x/input

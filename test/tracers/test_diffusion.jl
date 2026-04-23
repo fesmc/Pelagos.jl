@@ -2,31 +2,35 @@
 
 using Test
 using Pelagos.Diffusion: bryan_lewis_kappa, gm_redi_closure, diapycnal_closure
-using Pelagos.Parameters: K_BG, K_DEEP
+using Pelagos.Parameters: K_BG, K_DEEP, K_DEEP_ZREF
 
 @testset "Tracer diffusion" begin
 
     @testset "Bryan-Lewis profile limits" begin
-        # At z=0, the arctan argument is -α*z_ref (large negative) → κ < K_BG.
-        # At z = -z_ref, arctan(0) = 0 → κ = K_BG exactly.
-        # At z → -∞, arctan → π/2 → κ → K_DEEP.
-        kappa_surface = bryan_lewis_kappa(0.0)
-        @test kappa_surface > 0.0
-        @test kappa_surface < K_DEEP
+        # κ(z) = K_BG + (K_DEEP - K_BG) * (2/π) * atan(|z| / K_DEEP_ZREF)
+        # At z=0:       κ = K_BG  (surface minimum)
+        # At z=-z_ref:  κ = (K_BG + K_DEEP) / 2  (half-saturation depth)
+        # At z→-∞:      κ → K_DEEP  (deep asymptote)
 
-        # At z_ref depth, κ should equal K_BG exactly
-        using Pelagos.Parameters: K_DEEP_ZREF
-        kappa_zref = bryan_lewis_kappa(-K_DEEP_ZREF)
-        @test isapprox(kappa_zref, K_BG, atol=1e-12)
+        @test bryan_lewis_kappa(0.0) ≈ K_BG atol=1e-15
 
-        # At great depth (z → -∞), κ → K_DEEP; need z >> z_ref for close convergence
-        kappa_deep = bryan_lewis_kappa(-100000.0)
-        @test isapprox(kappa_deep, K_DEEP, rtol=0.02)
+        kappa_half = bryan_lewis_kappa(-K_DEEP_ZREF)
+        @test isapprox(kappa_half, (K_BG + K_DEEP) / 2, rtol=1e-10)
 
-        # κ must be monotonically increasing with depth
-        depths = [0.0, -500.0, -1000.0, -2000.0, -4000.0, -6000.0]
+        kappa_deep = bryan_lewis_kappa(-1e6)
+        @test isapprox(kappa_deep, K_DEEP, rtol=1e-4)
+
+        # Monotonically increasing with depth
+        depths = [0.0, -200.0, -500.0, -1000.0, -2000.0, -5000.0]
         kappas = [bryan_lewis_kappa(z) for z in depths]
         @test issorted(kappas)
+
+        # Always in [K_BG, K_DEEP]
+        for z in depths
+            k = bryan_lewis_kappa(z)
+            @test k >= K_BG - 1e-20
+            @test k <= K_DEEP + 1e-20
+        end
     end
 
     @testset "Bryan-Lewis: positive diffusivity" begin

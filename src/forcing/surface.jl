@@ -15,6 +15,8 @@
 
 module Surface
 
+using ..Parameters: RHO_0, CP_OCN
+
 export virtual_salinity_flux!, apply_global_salt_correction!
 
 """
@@ -79,8 +81,8 @@ Returns a (nlon, nlat) array of ∂T/∂t forcing due to surface heating.
 """
 function heat_flux_bc(QH   ::AbstractMatrix{Float64},
                       H_top::Float64,
-                      rho0 ::Float64 = 1025.0,
-                      cp   ::Float64 = 3994.0)::Matrix{Float64}
+                      rho0 ::Float64 = RHO_0,
+                      cp   ::Float64 = CP_OCN)::Matrix{Float64}
     return @. QH / (rho0 * cp * H_top)
 end
 

@@ -5,7 +5,9 @@
 module Parameters
 
 # ── Reference values ──────────────────────────────────────────────────────────
-const RHO_0       = 1025.0          # kg m⁻³,  Boussinesq reference density
+# rho0 = 1000 matches ocn_par.nml; GOLDSTEIN uses 1000 as Boussinesq reference.
+const RHO_0       = 1000.0          # kg m⁻³,  Boussinesq reference density
+const CP_OCN      = 3994.0          # J kg⁻¹ K⁻¹, specific heat of seawater
 const G           = 9.81            # m s⁻²,   gravitational acceleration
 const OMEGA       = 7.2921e-5       # rad s⁻¹, Earth rotation rate
 const R_EARTH     = 6.371e6         # m,        Earth radius
@@ -25,11 +27,14 @@ const K_GM        = 1500.0          # m² s⁻¹, Gent-McWilliams coefficient
 const SLOPE_MAX   = 1e-3            # –,       Gerdes et al. (1991) slope taper limit
 const K_CONV      = 100.0           # m² s⁻¹, convective adjustment diffusivity
 
-# Bryan & Lewis (1979) diapycnal diffusivity profile
-const K_BG        = 1e-4            # m² s⁻¹, background (surface) diapycnal κ (0.1 cm²/s)
-const K_DEEP      = 1.5e-4         # m² s⁻¹, deep diapycnal κ (1.5 cm²/s)
-const K_DEEP_ALPHA = 4.5e-4        # m⁻¹,    arctan transition steepness
-const K_DEEP_ZREF  = 2500.0        # m,       arctan transition depth reference
+# Bryan & Lewis (1979) diapycnal diffusivity profile (i_diff_dia=3 in ocn_par.nml)
+# κ(z) = K_BG + (K_DEEP-K_BG)·(2/π)·arctan(|z| / K_DEEP_ZREF)
+# κ(0) = K_BG (surface minimum); κ(K_DEEP_ZREF) = midpoint; κ(∞) = K_DEEP.
+# This form ensures κ ∈ [K_BG, K_DEEP] everywhere.
+# Note: exact formula in CLIMBER-X ocn_diff.f90 needs verification against Fortran.
+const K_BG       = 1e-5           # m² s⁻¹, surface diapycnal κ (diff_dia_min = 1e-5 m²/s)
+const K_DEEP     = 1.5e-4        # m² s⁻¹, deep asymptotic κ   (diff_dia_max = 1.5e-4 m²/s)
+const K_DEEP_ZREF = 1000.0       # m,       half-saturation depth (diff_dia_zref = 1000 m)
 
 # ── Geothermal forcing ─────────────────────────────────────────────────────────
 const Q_GEO_DEFAULT = 0.05          # W m⁻²,  default uniform geothermal heat flux
