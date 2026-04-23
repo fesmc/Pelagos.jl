@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/fesmc/Pelagos.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/fesmc/Pelagos.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://fesmc.github.io/Pelagos.jl/)
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://fesmc.github.io/Pelagos.jl/dev/)
 
 A Julia reimplementation of the **GOLDSTEIN** frictional-geostrophic ocean model,
 targeting functional equivalence with the GOLDSTEIN component of
