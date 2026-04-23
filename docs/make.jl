@@ -6,7 +6,7 @@ makedocs(;
     sitename  = "Pelagos.jl",
     format    = Documenter.HTML(;
         prettyurls    = get(ENV, "CI", "false") == "true",
-        canonical     = "https://github.com/YOUR_ORG/Pelagos.jl",
+        canonical     = "https://fesmc.github.io/Pelagos.jl/",
         edit_link     = "main",
         assets        = String[],
     ),
@@ -28,6 +28,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo   = "github.com/YOUR_ORG/Pelagos.jl.git",
+    repo      = "github.com/fesmc/Pelagos.jl.git",
     devbranch = "main",
 )
