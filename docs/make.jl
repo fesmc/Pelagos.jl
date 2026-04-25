@@ -21,6 +21,7 @@ makedocs(;
             "Forcing"           => "api/forcing.md",
             "Grid"              => "api/grid.md",
             "I/O"               => "api/io.md",
+            "Coupled Model"     => "api/ocean.md",
         ],
         "Development" => "development.md",
     ],

@@ -76,7 +76,12 @@ Fortran files are in the CLIMBER-X repository at `src/ocn/`.
 | Density ρ | < 1×10⁻⁴ kg m⁻³ |
 | Baroclinic u, v | < 1×10⁻⁴ m s⁻¹ RMS |
 | Barotropic ψ | < 0.5 Sv |
-| w | < 1×10⁻⁷ m s⁻¹ RMS |
+| ``w_{\text{top}}`` (rigid-lid residual) | < 1×10⁻¹² m s⁻¹ (machine precision) |
+| ``w`` interior | < 1×10⁻⁷ m s⁻¹ RMS |
 | T (year 100) | < 0.5 °C RMS |
 | S (year 100) | < 0.1 psu RMS |
 | AMOC at 26°N (year 100) | within 3 Sv |
+
+The rigid-lid residual is now constrained at machine precision because the
+corner-ψ barotropic correction makes the depth-integrated transport
+discretely divergence-free. See [Architecture](@ref) for details.

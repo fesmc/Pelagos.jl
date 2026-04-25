@@ -18,25 +18,53 @@ geostrophic balance is a reasonable assumption.
 
 ## Key features
 
+- All state in [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) `Field`s
+  on a shared `ImmersedBoundaryGrid` — pressure, velocity, T, S share the same
+  grid, halos, and immersed-boundary masking
 - UNESCO (Millero & Poisson 1981) equation of state — **not** linearised, **not** TEOS-10
-- Frictional-geostrophic baroclinic velocity solve (algebraic, per-column)
-- Barotropic streamfunction from an elliptic 2D vorticity equation with island constraints
-- Vertical velocity diagnosed from ∇·**u** = 0 (rigid-lid approximation)
-- Tracer (T, S) transport via [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl)
-  with GM/Redi isopycnal diffusion and Bryan-Lewis diapycnal mixing
+- Frictional-geostrophic baroclinic velocity solve on a C-grid using Oceananigans'
+  derivative operators with proper 4-point Coriolis averaging
+- Barotropic streamfunction from an elliptic 2D vorticity equation with island
+  constraints; corner-ψ formulation makes the depth-integrated transport
+  **discretely divergence-free to machine precision**
+- Vertical velocity diagnosed from ∇·**u** = 0 with a custom flux-form continuity
+  that handles stepped coastal bathymetry correctly
+- Tracer (T, S) transport via Oceananigans `PrescribedVelocityFields` with
+  GM/Redi isopycnal diffusion and Bryan-Lewis diapycnal mixing
 - Virtual salinity flux for freshwater forcing (rigid-lid consistent)
 - Geothermal heat flux at the ocean floor
 
 ## Quick start
 
+The high-level API is [`build_ocean_model`](@ref) and [`step_ocean!`](@ref):
+
 ```julia
 using Pelagos
 
+# Initialise a coupled velocity + tracer model from a CLIMBER-X restart
+m = build_ocean_model("path/to/climber-x/restart/pi_cc_open")
+
+# Step it forward (1-day timestep)
+tau_x = zeros(72, 36); tau_y = zeros(72, 36)
+step_ocean!(m, tau_x, tau_y, 86400.0)
+```
+
+Each `step_ocean!` runs the full pipeline:
+
+1. Compute hydrostatic pressure from T, S
+2. Solve the frictional-geostrophic baroclinic balance for u, v
+3. Solve the barotropic streamfunction and apply the C-grid divergence-free correction
+4. Diagnose w from ∇·**u** = 0
+5. Advance T, S one step in Oceananigans
+
+Lower-level pieces are available too:
+
+```julia
 # Compute seawater density at T=10°C, S=35 psu, p=50 bar
 ρ = seawater_density(10.0, 35.0, 50.0)
 
-# Build a simple Coriolis parameter array
-f = coriolis_parameter.(collect(-80.0:5.0:80.0))
+# Coriolis parameter array
+f = coriolis_parameter(collect(-80.0:5.0:80.0))
 ```
 
 ## Installation

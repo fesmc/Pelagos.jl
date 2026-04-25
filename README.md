@@ -23,10 +23,17 @@ transport engine while keeping the velocity solver entirely custom.
 
 ## Key features
 
+- All model state lives in **Oceananigans `Field`s on a shared `ImmersedBoundaryGrid`** —
+  pressure, velocity, T, S all use the same grid metrics, halos, and immersed-boundary
+  masking. No separate index conventions or GridParams; one source of geometry.
 - UNESCO (Millero & Poisson 1981) equation of state — not linearised, not TEOS-10
-- Frictional-geostrophic baroclinic velocity solve (algebraic, per-column, GPU-friendly)
-- Barotropic streamfunction from a 2D elliptic vorticity equation with island constraints
-- Vertical velocity diagnosed from ∇·**u** = 0 (rigid-lid approximation)
+- Frictional-geostrophic baroclinic velocity solve on a C-grid using Oceananigans'
+  derivative operators (`∂xᶠᶜᶜ`, `∂yᶜᶠᶜ`) with proper 4-point Coriolis averaging
+- Barotropic streamfunction from a 2D elliptic vorticity equation with island
+  constraints; corner-ψ formulation makes the depth-integrated transport
+  **discretely divergence-free to machine precision**, so `w_top` ≈ 1×10⁻¹⁸ m s⁻¹
+- Vertical velocity diagnosed from ∇·**u** = 0 with a custom flux-form continuity
+  that respects coastal stepped bathymetry without over-masking
 - T/S tracer transport via Oceananigans `PrescribedVelocityFields` with GM/Redi,
   Bryan-Lewis diapycnal mixing, and convective adjustment
 - Virtual salinity flux for freshwater forcing (rigid-lid consistent)
@@ -53,9 +60,29 @@ transport engine while keeping the velocity solver entirely custom.
 └─────────────────────────────────────────────────────────┘
 ```
 
-Oceananigans is used **only** as the tracer transport engine via
-`PrescribedVelocityFields`. It does not solve momentum equations or maintain
-a free surface — both are handled by Pelagos.
+Oceananigans solves no momentum equations and maintains no free surface — both
+are handled by Pelagos. It is used as the tracer engine and provides the grid,
+`Field`s, halo management, immersed-boundary masking, and finite-difference
+operators that the velocity solver builds on.
+
+## Quick start
+
+```julia
+using Pelagos
+
+# Build a coupled velocity + tracer ocean model from a CLIMBER-X restart
+m = build_ocean_model("path/to/climber-x/restart/pi_cc_open")
+
+# Step it forward (zero wind stress here; pass real τx, τy in production)
+tau_x = zeros(72, 36); tau_y = zeros(72, 36)
+for step in 1:365
+    step_ocean!(m, tau_x, tau_y, 86400.0)   # 1-day step
+end
+```
+
+Each `step_ocean!` runs the full pipeline: hydrostatic pressure → frictional-
+geostrophic baroclinic velocity → barotropic streamfunction + correction →
+diagnosed `w` → Oceananigans T/S advance.
 
 ## Development phases
 
@@ -66,7 +93,8 @@ reference output:
 2. ✅ **Baroclinic velocity** — frictional-geostrophic algebraic solve
 3. ✅ **Barotropic solver** — 2D elliptic ψ with island constraints
 4. ✅ **Continuity** — diagnose w from ∇·u = 0
-5. 🔲 **Oceananigans T/S model** — wire up PrescribedVelocityFields, closures
+5. ✅ **Oceananigans T/S model** — coupled `OceanModel` runs stably for ≥1 year;
+   `w_top` at machine precision; tracer drift consistent with diffusion+advection
 6. 🔲 **Integration validation** — 100-year spinup vs. CLIMBER-X fixtures
 
 ## Running the tests
