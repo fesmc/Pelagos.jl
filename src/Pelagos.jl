@@ -6,12 +6,11 @@ targeting functional equivalence with the GOLDSTEIN component of CLIMBER-X v1.0
 (Willeit et al., GMD 2022, https://doi.org/10.5194/gmd-15-5905-2022).
 
 Architecture:
-- Custom velocity solver (frictional-geostrophic + barotropic ψ) lives in src/velocity/
-- Oceananigans is used **only** as the tracer transport engine via PrescribedVelocityFields
-- UNESCO (Millero & Poisson 1981) equation of state implemented from scratch in src/eos/
-
-Development proceeds in phases; do not use modules from later phases before
-the tests for earlier phases pass.
+- All model state lives in Oceananigans Fields on a shared ImmersedBoundaryGrid
+- Custom velocity solver (frictional-geostrophic + barotropic ψ) in src/velocity/
+- Oceananigans used for tracer transport (T, S) via PrescribedVelocityFields,
+  and for grid geometry, field operations, halo management, and FD operators
+- UNESCO (Millero & Poisson 1981) equation of state in src/eos/
 """
 module Pelagos
 
@@ -63,15 +62,19 @@ include("io/restarts.jl")
 using .Output
 using .Restarts
 
+# ── Full ocean model (velocity + tracer integration) ───────────────────────────
+include("ocean.jl")
+using .Ocean
+
 # ── Public API re-exports ──────────────────────────────────────────────────────
 # EOS
 export seawater_density, seawater_density_insitu, seawater_density!
 # Pressure
-export compute_pressure, compute_pressure!
+export compute_pressure!
 # Velocity
 export solve_baroclinic!, coriolis_parameter
 export build_barotropic_solver, solve_barotropic!, compute_rbt
-export diagnose_w, diagnose_w!
+export diagnose_w!
 # Islands
 export detect_islands, IslandInfo
 # Grid
@@ -88,5 +91,7 @@ export build_tracer_model, update_velocities!
 # I/O
 export write_snapshot, write_restart, read_restart
 export load_climberx_restart, load_climberx_forcing, bgrid_u_to_cgrid, bgrid_v_to_cgrid, bgrid_w_to_cgrid
+# Full ocean model
+export OceanModel, build_ocean_model, step_ocean!
 
 end # module Pelagos

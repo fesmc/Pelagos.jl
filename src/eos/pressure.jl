@@ -1,79 +1,112 @@
-# Hydrostatic pressure integration for GOLDSTEIN ocean model.
+# Hydrostatic pressure integration on an Oceananigans grid.
 #
-# Pressure is computed at cell centres by integrating ρ·g downward from the surface.
-# The top-surface boundary condition is p_surface = 0 (rigid lid, no sea surface pressure).
-# Convention: z is negative downward, cell centres at z[k] < 0, k=1 at surface.
-#
-# Staggering: pressure at cell centres (T-points), consistent with Fortran ocn_pressure.f90.
+# p=0 at the surface (rigid lid). Integrates downward from k=Nz (shallowest)
+# to k=1 (deepest) — Oceananigans' bottom-to-top index convention.
+# Pressure is in bar (1 bar = 1e5 Pa).
+# After integration, fill_halo_regions! is called so p can be used directly
+# with Oceananigans derivative operators in the baroclinic solver.
 
 module Pressure
 
+using Oceananigans
+using Oceananigans.BoundaryConditions: fill_halo_regions!
+using Oceananigans.Grids: AbstractGrid
+using Oceananigans.Fields: Field, Center
+using Oceananigans.Operators: Δzᵃᵃᶜ
+using Oceananigans.Grids: inactive_node
+
 using ..UNESCO: seawater_density
 
-export compute_pressure!, compute_pressure
+export compute_pressure!
 
-const G   = 9.81    # m s⁻²
-const RHO_0 = 1025.0 # kg m⁻³
+const _G = 9.81       # m s⁻²
 
 """
-    compute_pressure!(p, T, S, z_faces, ocean_mask)
+    compute_pressure!(p, T, S, grid)
 
-Integrate hydrostatic pressure downward from the surface.
+Integrate hydrostatic pressure downward into the water column.
 
-# Arguments
-- `p`         : output pressure array (nlon, nlat, nz), bar
-- `T`         : potential temperature (nlon, nlat, nz), °C
-- `S`         : salinity (nlon, nlat, nz), psu
-- `z_faces`   : vertical face positions (nz+1,), m, negative downward, z_faces[1]=0
-- `ocean_mask`: Bool array (nlon, nlat), true = ocean cell
+`p`, `T`, `S` are `Field{Center, Center, Center}` on `grid`.
+Uses Oceananigans k-convention: k=Nz = surface layer, k=1 = deepest layer.
+Immersed (below-bathymetry) cells are set to p = pressure of the nearest
+active cell above them, so horizontal pressure gradients at the seafloor
+boundary remain small (avoids spurious velocities from the FG solve).
+Returns `p` with halos filled.
 """
-function compute_pressure!(p        ::AbstractArray{Float64,3},
-                           T        ::AbstractArray{Float64,3},
-                           S        ::AbstractArray{Float64,3},
-                           z_faces  ::AbstractVector{Float64},
-                           ocean_mask::AbstractMatrix{Bool})
-    nlon, nlat, nz = size(p)
+function compute_pressure!(p    ::Field{Center, Center, Center},
+                           T    ::Field{Center, Center, Center},
+                           S    ::Field{Center, Center, Center},
+                           grid ::AbstractGrid)
+    Nz = grid.Nz
+    Nx = grid.Nx
+    Ny = grid.Ny
 
-    # Iterate downward from surface (k=1) to bottom (k=nz)
-    @inbounds for k in 1:nz
-        dz = abs(z_faces[k] - z_faces[k+1])   # layer thickness (positive)
-        for j in 1:nlat, i in 1:nlon
-            if !ocean_mask[i, j]
-                p[i, j, k] = 0.0
+    p_d = interior(p)
+    T_d = interior(T)
+    S_d = interior(S)
+
+    # Surface layer (k = Nz): pressure at the centre of the top cell.
+    # p_surface = 0 (rigid lid), so p[Nz] = ρ·g·(Δz/2).
+    @inbounds for j in 1:Ny, i in 1:Nx
+        if inactive_node(i, j, Nz, grid, Center(), Center(), Center())
+            p_d[i, j, Nz] = 0.0
+            continue
+        end
+        Tk  = T_d[i, j, Nz]
+        Sk  = max(S_d[i, j, Nz], 0.0)
+        dzk = Δzᵃᵃᶜ(i, j, Nz, grid)
+        ρ   = seawater_density(Tk, Sk, 0.0)
+        p_d[i, j, Nz] = ρ * _G * (dzk * 0.5) / 1e5
+    end
+
+    # Integrate downward: k = Nz-1 → 1.
+    @inbounds for k in Nz-1:-1:1
+        for j in 1:Ny, i in 1:Nx
+            if inactive_node(i, j, k, grid, Center(), Center(), Center())
+                # For immersed cells copy the pressure from the layer above
+                # so horizontal pressure gradients at the seafloor stay small.
+                p_d[i, j, k] = p_d[i, j, k+1]
                 continue
             end
-            # Pressure at level k centre = pressure at level k top + ρ·g·(dz/2)
-            # For k=1: p_top = 0 (rigid lid)
-            p_top = (k == 1) ? 0.0 : p[i, j, k-1] + _half_layer_pressure(T[i,j,k-1], S[i,j,k-1],
-                                                                            p[i,j,k-1],
-                                                                            z_faces[k-1], z_faces[k])
-            # Pressure at cell centre
-            rho_k  = seawater_density(T[i,j,k], S[i,j,k], p_top * 0.5)  # first-guess p
-            p[i,j,k] = p_top + rho_k * G * (dz * 0.5) / 1e5  # convert Pa → bar
+            dz_above = Δzᵃᵃᶜ(i, j, k+1, grid)
+            dz_below = Δzᵃᵃᶜ(i, j, k,   grid)
+
+            Tk_above = T_d[i, j, k+1];  Sk_above = max(S_d[i, j, k+1], 0.0)
+            pk_above = p_d[i, j, k+1]
+            Tk       = T_d[i, j, k];    Sk       = max(S_d[i, j, k],   0.0)
+
+            ρ_above = seawater_density(Tk_above, Sk_above, pk_above)
+            p_face  = pk_above + ρ_above * _G * (dz_above * 0.5) / 1e5
+
+            ρ_below = seawater_density(Tk, Sk, p_face)
+            p_d[i, j, k] = p_face + ρ_below * _G * (dz_below * 0.5) / 1e5
         end
     end
-    return p
-end
 
-# Pressure increment from level-k centre to the top face of level k+1
-@inline function _half_layer_pressure(T::Float64, S::Float64, p::Float64,
-                                      z_top::Float64, z_bot::Float64)::Float64
-    dz   = abs(z_top - z_bot)
-    rho  = seawater_density(T, S, p)
-    return rho * G * (dz * 0.5) / 1e5   # bar
-end
+    # 2-D land-column ghost fill: copy pressure from an adjacent ocean column
+    # so ∂p/∂x and ∂p/∂y at ocean-land boundaries stay small.  Without this,
+    # the pressure gradient at a wall gives (p_ocean − 0)/Δx which would
+    # produce catastrophic velocities in the FG solve.
+    @inbounds for j in 1:Ny, i in 1:Nx
+        # Is this column fully land? (top cell is inactive)
+        inactive_node(i, j, Nz, grid, Center(), Center(), Center()) || continue
+        ip1 = mod1(i+1, Nx); im1 = mod1(i-1, Nx)
+        jp1 = min(j+1, Ny);  jm1 = max(j-1, 1)
+        src_i, src_j = 0, 0
+        for (ci, cj) in ((ip1, j), (im1, j), (i, jp1), (i, jm1))
+            if !inactive_node(ci, cj, Nz, grid, Center(), Center(), Center())
+                src_i, src_j = ci, cj
+                break
+            end
+        end
+        if src_i != 0
+            for k in 1:Nz
+                p_d[i, j, k] = p_d[src_i, src_j, k]
+            end
+        end
+    end
 
-"""
-    compute_pressure(T, S, z_faces, ocean_mask)
-
-Allocating version of `compute_pressure!`. Returns pressure array (nlon, nlat, nz) in bar.
-"""
-function compute_pressure(T        ::AbstractArray{Float64,3},
-                          S        ::AbstractArray{Float64,3},
-                          z_faces  ::AbstractVector{Float64},
-                          ocean_mask::AbstractMatrix{Bool})
-    p = zeros(Float64, size(T))
-    compute_pressure!(p, T, S, z_faces, ocean_mask)
+    fill_halo_regions!(p)
     return p
 end
 

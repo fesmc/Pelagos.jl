@@ -101,7 +101,7 @@ function build_tracer_model(grid;
         free_surface       = ImplicitFreeSurface(),
         coriolis           = nothing,
         momentum_advection = nothing,
-        tracer_advection   = WENO(),
+        tracer_advection   = UpwindBiased(order=1),
     )
 
     # ── Initial conditions ─────────────────────────────────────────────────────

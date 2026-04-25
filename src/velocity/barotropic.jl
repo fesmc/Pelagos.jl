@@ -22,10 +22,15 @@
 module Barotropic
 
 using SparseArrays
-using ..Parameters: R_BT_BASE, R_BT_FAC, F_MIN, RHO_0
+using Oceananigans
+using Oceananigans.Grids: AbstractGrid
+using Oceananigans.Operators: Δxᶜᶜᶜ, Δyᶜᶜᶜ
+using Oceananigans.Grids: inactive_node
+
+using ..Parameters: R_BT_BASE, R_BT_FAC, F_MIN, RHO_0, R_EARTH
 using ..Islands: IslandInfo, detect_islands
 
-export BarotropicSolver, build_barotropic_solver!, solve_barotropic!
+export BarotropicSolver, build_barotropic_solver, compute_rbt, solve_barotropic!
 
 """
     BarotropicSolver
@@ -281,6 +286,47 @@ function solve_barotropic!(solver    ::BarotropicSolver,
         idx > 0 && (psi[i, j] = psi_vec[idx])
     end
     return psi
+end
+
+"""
+    build_barotropic_solver(grid::AbstractGrid) -> BarotropicSolver
+
+Convenience constructor: extracts ocean mask, bathymetric depth, Coriolis,
+and grid spacings from the Oceananigans ImmersedBoundaryGrid, then calls
+the array-based assembler.
+
+A column (i,j) is ocean when `bottom_height[i,j] < 0`; H = −bottom_height.
+"""
+function build_barotropic_solver(grid::AbstractGrid)::BarotropicSolver
+    Nx = grid.Nx
+    Ny = grid.Ny
+
+    ocean_mask = Matrix{Bool}(undef, Nx, Ny)
+    H          = zeros(Float64, Nx, Ny)
+    dx         = zeros(Float64, Ny)
+    dy_val     = Δyᶜᶜᶜ(1, 1, 1, grid)   # uniform meridional spacing, m
+
+    bh = grid.immersed_boundary.bottom_height   # (Nx, Ny), negative = ocean
+
+    @inbounds for j in 1:Ny
+        dx[j] = Δxᶜᶜᶜ(1, j, 1, grid)   # zonal spacing at T-cell centre, m
+        for i in 1:Nx
+            is_ocean = bh[i, j] < 0.0
+            ocean_mask[i, j] = is_ocean
+            H[i, j]          = is_ocean ? -bh[i, j] : 0.0
+        end
+    end
+
+    # Coriolis (with equatorial floor) at T-cell latitudes
+    f = [begin
+             φ = grid.φᵃᶜᵃ[j]
+             fj = 2.0 * (2π / 86164.0) * sind(φ)
+             s  = fj >= 0.0 ? 1.0 : -1.0
+             s * max(abs(fj), F_MIN)
+         end for j in 1:Ny]
+
+    r_bt = compute_rbt(ocean_mask, H, dx, dy_val)
+    return build_barotropic_solver(ocean_mask, f, H, dx, dy_val, r_bt)
 end
 
 end # module Barotropic
