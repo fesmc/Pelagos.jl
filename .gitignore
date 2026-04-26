@@ -3,3 +3,11 @@
 /docs/Manifest.toml
 # CLIMBER-X input data (large files, symlinked locally)
 climber-x/input
+
+# Local Claude Code settings/state
+/.claude/
+
+# Auxiliary scripts: ignore generated output and Manifest only
+/scripts/output/
+/scripts/figures/
+/scripts/Manifest.toml

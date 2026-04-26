@@ -67,6 +67,26 @@ Lower-level pieces are available too:
 f = coriolis_parameter(collect(-80.0:5.0:80.0))
 ```
 
+## End-to-end example: 1-year monthly run + figures
+
+Two ready-to-run scripts in `scripts/` cover the full workflow:
+
+* `scripts/run_1yr.jl` — drives `OceanModel` for 12 × 30-day months from the
+  CLIMBER-X PI restart (or zeroes wind stress with `PELAGOS_NO_WIND=1`),
+  writing T, S, u, v, w, ψ\_bt, ρ, p plus the static ocean mask and
+  bathymetry to a single NetCDF file.
+* `scripts/plot_run.jl` — reads that NetCDF and produces six PNG figures
+  (summary, surface maps, zonal-mean depth–latitude sections, zonal-mean
+  profiles, MOC, monthly time series) using CairoMakie.
+
+```bash
+# Run the diffusion-only baseline (≈ 30 s)
+PELAGOS_NO_WIND=1 julia --project=. scripts/run_1yr.jl
+
+# Make figures (CairoMakie installs into scripts/Project.toml on first call)
+julia --project=scripts scripts/plot_run.jl scripts/output/pelagos_1yr_monthly.nc
+```
+
 ## Installation
 
 ```julia

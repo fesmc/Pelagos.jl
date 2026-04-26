@@ -84,6 +84,24 @@ Each `step_ocean!` runs the full pipeline: hydrostatic pressure → frictional-
 geostrophic baroclinic velocity → barotropic streamfunction + correction →
 diagnosed `w` → Oceananigans T/S advance.
 
+## Driver scripts
+
+The `scripts/` directory contains a self-contained 1-year run + plotting
+workflow:
+
+```bash
+# 1) Run 12 monthly snapshots, T, S, u, v, w, ψ_bt, ρ, p → NetCDF
+PELAGOS_NO_WIND=1 julia --project=. scripts/run_1yr.jl
+
+# 2) Make a set of CairoMakie figures from the NetCDF
+julia --project=scripts scripts/plot_run.jl scripts/output/pelagos_1yr_monthly.nc
+```
+
+Useful environment variables for the run script:
+`PELAGOS_RESTART`, `PELAGOS_FORCING`, `PELAGOS_OUTPUT`, `PELAGOS_DT_DAYS`,
+`PELAGOS_NO_WIND`. The plotting script auto-instantiates its own
+`scripts/Project.toml` (CairoMakie + NCDatasets) on first run.
+
 ## Development phases
 
 Development follows a strict sequential order validated against CLIMBER-X Fortran
