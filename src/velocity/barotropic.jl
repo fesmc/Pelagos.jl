@@ -239,10 +239,11 @@ end
 """
     solve_barotropic!(solver, tau_x, tau_y, H, f, dx, dy, ocean_mask) -> Matrix{Float64}
 
-Solve for the barotropic streamfunction ψ (m² s⁻¹ = Sv × 1e6 ÷ 1000... actually m³/s).
+Solve for the barotropic streamfunction ψ in m³ s⁻¹ (1 Sv = 10⁶ m³ s⁻¹).
 Returns ψ on the full (nlon, nlat) grid (land cells = 0).
 
-Wind stress τ in N m⁻².
+Wind stress `tau_x`, `tau_y` in N m⁻²; the assembler divides by `RHO_0` so
+the equation is dimensionally consistent.
 """
 function solve_barotropic!(solver    ::BarotropicSolver,
                            tau_x     ::Matrix{Float64},
@@ -258,7 +259,11 @@ function solve_barotropic!(solver    ::BarotropicSolver,
 
     fill!(rhs, 0.0)
 
-    # Assemble RHS: curl(τ/H)
+    # Assemble RHS: (1/ρ₀) · curl(τ/H).
+    # The barotropic vorticity equation has units s⁻²:
+    #   J(ψ, f/H)  −  ∇·((r_bt/H) ∇ψ)  =  (1/ρ₀) · curl(τ/H)
+    # Without the 1/ρ₀ factor the RHS is in kg·m⁻³·s⁻² and ψ comes out a
+    # factor of ρ₀ ≈ 1000 too large.
     for j in 1:nlat, i in 1:nlon
         ocean_mask[i, j] || continue
         row = ci[i, j]
@@ -271,7 +276,7 @@ function solve_barotropic!(solver    ::BarotropicSolver,
         # curl(τ/H) = ∂(τy/H)/∂x − ∂(τx/H)/∂y
         dtauY_dx = (tau_y[ip1,j]/max(H[ip1,j],1.0) - tau_y[im1,j]/max(H[im1,j],1.0)) / (2.0*dxj)
         dtauX_dy = (tau_x[i,jp1]/max(H[i,jp1],1.0) - tau_x[i,jm1]/max(H[i,jm1],1.0)) / (2.0*dy)
-        rhs[row] = dtauY_dx - dtauX_dy
+        rhs[row] = (dtauY_dx - dtauX_dy) / RHO_0
     end
 
     # Solve A·ψ = rhs using Julia's built-in sparse direct solver

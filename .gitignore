@@ -7,6 +7,10 @@ climber-x/input
 # Local Claude Code settings/state
 /.claude/
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Auxiliary scripts: ignore generated output and Manifest only
 /scripts/output/
 /scripts/figures/
