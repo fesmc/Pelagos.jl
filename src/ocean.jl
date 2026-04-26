@@ -30,7 +30,8 @@ using Oceananigans.Grids: inactive_node, peripheral_node
 
 using ..Pressure: compute_pressure!
 using ..Baroclinic: solve_baroclinic!, coriolis_parameter
-using ..Barotropic: BarotropicSolver, build_barotropic_solver, solve_barotropic!
+using ..Barotropic: BarotropicSolver, build_barotropic_solver, solve_barotropic!,
+                     compute_jebar_forcing!
 using ..Continuity: diagnose_w!
 using ..TracerSetup: build_tracer_model, update_velocities!
 using ..GridSetup: build_climberx_grid
@@ -57,6 +58,7 @@ mutable struct OceanModel
     tracer_model :: Any                            # HydrostaticFreeSurfaceModel
     bar_solver   :: BarotropicSolver
     p            :: Field{Center, Center, Center}
+    ubar_jbar    :: Matrix{Float64}                # JEBAR forcing scratch (Nx, Ny)
 end
 
 # ── Constructor ────────────────────────────────────────────────────────────────
@@ -98,7 +100,10 @@ function build_ocean_model(restart_dir ::String;
     # Pressure field (T-point, same grid as tracers)
     p = Field{Center, Center, Center}(grid)
 
-    return OceanModel(grid, tracer_model, bar_solver, p)
+    # JEBAR forcing scratch buffer (recomputed each step from current T, S)
+    ubar_jbar = zeros(Float64, grid.Nx, grid.Ny)
+
+    return OceanModel(grid, tracer_model, bar_solver, p, ubar_jbar)
 end
 
 # ── Single timestep ────────────────────────────────────────────────────────────
@@ -157,7 +162,17 @@ function step_ocean!(m     ::OceanModel,
 
     ocean_mask, H, f_arr, dx, dy = _extract_barotropic_geometry(grid)
 
-    # Solve barotropic vorticity equation for ψ at T-cells (existing physics)
+    # JEBAR forcing — currently disabled.  `compute_jebar_forcing` produces
+    # the right structure but uses a cell-bottom depth integral; at interior
+    # cells with sharp bathymetric variation this overstates E by an order
+    # of magnitude relative to CLIMBER-X's face-bottom (common-bottom)
+    # integration.  Wiring it in as-is gives |ψ_bt| ~ 10⁵ Sv from JEBAR
+    # alone — much worse than the wind-only solution.  Re-enable once the
+    # face-bottom-summed form is implemented (jbar.f90 reference).
+    #
+    # compute_jebar_forcing!(m.ubar_jbar, T, S, grid)
+    # psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask;
+    #                           ubar_jbar = m.ubar_jbar)
     psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask)
 
     # Map ψ_T to corners.  ψ_c[i, j] is the corner at position (i−½, j−½),

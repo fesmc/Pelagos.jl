@@ -74,6 +74,7 @@ export compute_pressure!
 # Velocity
 export solve_baroclinic!, coriolis_parameter
 export build_barotropic_solver, solve_barotropic!, compute_rbt
+export compute_jebar_forcing, compute_jebar_forcing!
 export diagnose_w!
 # Islands
 export detect_islands, IslandInfo

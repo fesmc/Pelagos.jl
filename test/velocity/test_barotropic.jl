@@ -2,7 +2,11 @@
 
 using Test
 using SparseArrays
-using Pelagos.Barotropic: build_barotropic_solver, solve_barotropic!, compute_rbt
+using Oceananigans
+using Oceananigans.Fields: Field, Center, set!
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBottom
+using Pelagos.Barotropic: build_barotropic_solver, solve_barotropic!, compute_rbt,
+                           compute_jebar_forcing
 using Pelagos.Baroclinic: coriolis_parameter
 
 @testset "Barotropic streamfunction solver" begin
@@ -123,5 +127,28 @@ using Pelagos.Baroclinic: coriolis_parameter
         Lx     = (nlon-1) * dx[1]
         ψ_sv   = curl_τ / (β * 1000.0) * Lx
         @test ψmax < 5 * ψ_sv                # never larger than ~Sverdrup
+    end
+
+    # JEBAR forcing utility — basic invariants.  The full physics is staged
+    # for follow-up (`step_ocean!` does not yet use this); this test just
+    # checks the function is type-stable and produces zero forcing on a
+    # featureless ocean.
+    @testset "JEBAR forcing — featureless ocean → zero" begin
+        z_faces = collect(range(-3000.0, 0.0; length=7))
+        Nx, Ny = 4, 4
+        ug = LatitudeLongitudeGrid(CPU();
+            size = (Nx, Ny, length(z_faces)-1),
+            longitude = (-180, 180), latitude = (-15.0, 15.0),
+            z = z_faces, topology = (Periodic, Bounded, Bounded), halo = (1,1,1))
+        bh = fill(z_faces[1], Nx, Ny)
+        grid = ImmersedBoundaryGrid(ug, GridFittedBottom(bh))
+        T = Field{Center, Center, Center}(grid)
+        S = Field{Center, Center, Center}(grid)
+        set!(T, 10.0)                        # uniform T, S → uniform ρ
+        set!(S, 35.0)
+        jbar = compute_jebar_forcing(T, S, grid)
+        @test size(jbar) == (Nx, Ny)
+        # Uniform ρ + flat bottom: J(1/H, E) ≡ 0
+        @test maximum(abs.(jbar)) < 1e-12
     end
 end

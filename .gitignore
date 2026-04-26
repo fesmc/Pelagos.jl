@@ -4,6 +4,9 @@
 # CLIMBER-X input data (large files, symlinked locally)
 climber-x/input
 
+# CLIMBER-X source tree (separate Fortran reference, available locally only)
+climber-x/climber-x
+
 # Local Claude Code settings/state
 /.claude/
 

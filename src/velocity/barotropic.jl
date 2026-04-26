@@ -24,13 +24,16 @@ module Barotropic
 using SparseArrays
 using Oceananigans
 using Oceananigans.Grids: AbstractGrid
-using Oceananigans.Operators: Δxᶜᶜᶜ, Δyᶜᶜᶜ
+using Oceananigans.Operators: Δxᶜᶜᶜ, Δyᶜᶜᶜ, Δzᵃᵃᶜ
 using Oceananigans.Grids: inactive_node
+using Oceananigans.Fields: Field, Center, interior
 
-using ..Parameters: R_BT_BASE, R_BT_FAC, F_MIN, RHO_0, R_EARTH
+using ..Parameters: R_BT_BASE, R_BT_FAC, F_MIN, RHO_0, G, R_EARTH
+using ..UNESCO: seawater_density
 using ..Islands: IslandInfo, detect_islands
 
 export BarotropicSolver, build_barotropic_solver, compute_rbt, solve_barotropic!
+export compute_jebar_forcing, compute_jebar_forcing!
 
 """
     BarotropicSolver
@@ -262,25 +265,31 @@ Returns ψ on the full (nlon, nlat) grid (land cells = 0).
 Wind stress `tau_x`, `tau_y` in N m⁻²; the assembler divides by `RHO_0` so
 the equation is dimensionally consistent.
 """
-function solve_barotropic!(solver    ::BarotropicSolver,
-                           tau_x     ::Matrix{Float64},
-                           tau_y     ::Matrix{Float64},
-                           H         ::Matrix{Float64},
-                           f         ::Vector{Float64},
-                           dx        ::Vector{Float64},
-                           dy        ::Float64,
-                           ocean_mask::Matrix{Bool})::Matrix{Float64}
+function solve_barotropic!(solver     ::BarotropicSolver,
+                           tau_x      ::Matrix{Float64},
+                           tau_y      ::Matrix{Float64},
+                           H          ::Matrix{Float64},
+                           f          ::Vector{Float64},
+                           dx         ::Vector{Float64},
+                           dy         ::Float64,
+                           ocean_mask ::Matrix{Bool};
+                           ubar_jbar  ::Union{Nothing, Matrix{Float64}} = nothing
+                          )::Matrix{Float64}
     nlon, nlat = size(ocean_mask)
     rhs   = solver.rhs
     ci    = solver.cell_index
 
     fill!(rhs, 0.0)
 
-    # Assemble RHS: (1/ρ₀) · curl(τ/H).
+    # Assemble RHS: (1/ρ₀) · [curl(τ/H) + JEBAR].
     # The barotropic vorticity equation has units s⁻²:
-    #   J(ψ, f/H)  −  ∇·((r_bt/H) ∇ψ)  =  (1/ρ₀) · curl(τ/H)
-    # Without the 1/ρ₀ factor the RHS is in kg·m⁻³·s⁻² and ψ comes out a
-    # factor of ρ₀ ≈ 1000 too large.
+    #   J(ψ, f/H)  −  ∇·((r_bt/H) ∇ψ)  =  (1/ρ₀) · curl(τ/H) − (1/ρ₀) · J(E, 1/H)
+    # where E = ∫ p_bc dz is the depth-integrated baroclinic pressure
+    # (Pa·m).  Both forcings have units kg·m⁻³·s⁻² (= Pa·m⁻²); /ρ₀ brings
+    # them to s⁻² to match the LHS.
+    #
+    # JEBAR sign: the Jacobian J(1/H, E) = -J(E, 1/H), so we ADD ubar_jbar
+    # to the wind-stress term — `ubar_jbar` itself is already J(1/H, E).
     for j in 1:nlat, i in 1:nlon
         ocean_mask[i, j] || continue
         row = ci[i, j]
@@ -293,7 +302,11 @@ function solve_barotropic!(solver    ::BarotropicSolver,
         # curl(τ/H) = ∂(τy/H)/∂x − ∂(τx/H)/∂y
         dtauY_dx = (tau_y[ip1,j]/max(H[ip1,j],1.0) - tau_y[im1,j]/max(H[im1,j],1.0)) / (2.0*dxj)
         dtauX_dy = (tau_x[i,jp1]/max(H[i,jp1],1.0) - tau_x[i,jm1]/max(H[i,jm1],1.0)) / (2.0*dy)
-        rhs[row] = (dtauY_dx - dtauX_dy) / RHO_0
+        wind_term = dtauY_dx - dtauX_dy
+
+        jbar_term = isnothing(ubar_jbar) ? 0.0 : ubar_jbar[i, j]
+
+        rhs[row] = (wind_term + jbar_term) / RHO_0
     end
 
     # Solve A·ψ = rhs using Julia's built-in sparse direct solver
@@ -308,6 +321,113 @@ function solve_barotropic!(solver    ::BarotropicSolver,
         idx > 0 && (psi[i, j] = psi_vec[idx])
     end
     return psi
+end
+
+# ── JEBAR forcing ────────────────────────────────────────────────────────────
+
+"""
+    compute_jebar_forcing(T, S, grid) -> Matrix{Float64}
+
+Compute the JEBAR (Joint Effect of Baroclinicity And Relief) forcing for the
+barotropic-vorticity RHS, in units of kg m⁻³ s⁻² (= Pa m⁻², equivalent to
+the wind-stress curl term *before* division by ρ₀).
+
+The CLIMBER-X formulation:
+
+  bp(i, j, k) = − ∫_{z_bottom}^{z_k} ρ g dz        (Pa, zero at the bottom)
+  E(i, j)     = ∫_{bottom}^{0} bp dz               (Pa·m)
+  ubar_jbar   = J(1/H, E) at each T-cell
+
+Spatial derivatives are central-differenced (consistent with the rest of
+the matrix assembly).  At ocean–land neighbours the corresponding gradient
+piece is set to zero, equivalent to clamping `1/H = 0` over land — a
+flux-form treatment of the closed boundary.
+
+Periodic in λ; bounded north/south.  Land cells return 0.
+"""
+function compute_jebar_forcing(T    ::Field{Center, Center, Center},
+                               S    ::Field{Center, Center, Center},
+                               grid ::AbstractGrid)::Matrix{Float64}
+    Nx = grid.Nx; Ny = grid.Ny; Nz = grid.Nz
+    out = zeros(Float64, Nx, Ny)
+    compute_jebar_forcing!(out, T, S, grid)
+    return out
+end
+
+function compute_jebar_forcing!(ubar_jbar::Matrix{Float64},
+                                T    ::Field{Center, Center, Center},
+                                S    ::Field{Center, Center, Center},
+                                grid ::AbstractGrid)
+    Nx = grid.Nx; Ny = grid.Ny; Nz = grid.Nz
+    Td = interior(T); Sd = interior(S)
+
+    # ── Step 1: bp[i,j,k] = baroclinic pressure relative to bottom (Pa) ──
+    # bp = 0 at the deepest active level; integrate upward using avg ρ on
+    # the interface and the cell-centre-to-cell-centre distance dza.
+    bp = zeros(Float64, Nx, Ny, Nz)
+    @inbounds for j in 1:Ny, i in 1:Nx
+        # find deepest active layer for this column
+        k_bot = 0
+        for k in 1:Nz
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
+            k_bot = k; break
+        end
+        k_bot == 0 && continue          # all-land column
+        for k in (k_bot+1):Nz
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && break
+            ρ_above = seawater_density(Td[i,j,k],   max(Sd[i,j,k],   0.0), 0.0)
+            ρ_below = seawater_density(Td[i,j,k-1], max(Sd[i,j,k-1], 0.0), 0.0)
+            dza = 0.5 * (Δzᵃᵃᶜ(i, j, k-1, grid) + Δzᵃᵃᶜ(i, j, k, grid))
+            bp[i,j,k] = bp[i,j,k-1] - G * 0.5 * (ρ_above + ρ_below) * dza
+        end
+    end
+
+    # ── Step 2: E[i,j] = Σ_k bp · dz_k (Pa·m) and 1/H from ocean column ──
+    E    = zeros(Float64, Nx, Ny)
+    invH = zeros(Float64, Nx, Ny)
+    @inbounds for j in 1:Ny, i in 1:Nx
+        Hcol = 0.0
+        for k in 1:Nz
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
+            dzk = Δzᵃᵃᶜ(i, j, k, grid)
+            E[i,j] += bp[i,j,k] * dzk
+            Hcol   += dzk
+        end
+        Hcol > 0 && (invH[i,j] = 1.0 / Hcol)
+    end
+
+    # ── Step 3: J(1/H, E) on T-cells via central difference ──────────────
+    # ubar_jbar[i,j] = ∂(1/H)/∂x · ∂E/∂y − ∂(1/H)/∂y · ∂E/∂x
+    #
+    # At coastal cells (any land neighbour) the bathymetric gradient
+    # ∂(1/H)/∂· spikes — the "JEBAR cliff" effect — and an unconditioned
+    # central difference produces unphysically large forcing.  We zero
+    # out those cells; the ψ contribution from coastal columns can be
+    # restored later via the corner-averaged form (CLIMBER-X jbar.f90)
+    # but keeping things simple here lets us validate the interior JEBAR
+    # signal before tackling the coastal staggering separately.
+    fill!(ubar_jbar, 0.0)
+    @inbounds for j in 2:(Ny-1), i in 1:Nx
+        invH[i,j] == 0.0 && continue
+        ip1 = mod1(i+1, Nx); im1 = mod1(i-1, Nx)
+
+        # All four neighbours must be ocean (i.e. interior ocean cell).
+        if invH[ip1,j] == 0.0 || invH[im1,j] == 0.0 ||
+           invH[i,j+1] == 0.0 || invH[i,j-1] == 0.0
+            continue
+        end
+
+        dxj = Δxᶜᶜᶜ(i, j, 1, grid)
+        dy  = Δyᶜᶜᶜ(i, j, 1, grid)
+
+        d_invH_dx = (invH[ip1, j  ] - invH[im1, j  ]) / (2.0 * dxj)
+        d_invH_dy = (invH[i,   j+1] - invH[i,   j-1]) / (2.0 * dy)
+        dE_dx     = (E[ip1, j  ]    - E[im1, j  ])    / (2.0 * dxj)
+        dE_dy     = (E[i,   j+1]    - E[i,   j-1])    / (2.0 * dy)
+
+        ubar_jbar[i, j] = d_invH_dx * dE_dy - d_invH_dy * dE_dx
+    end
+    return ubar_jbar
 end
 
 """
