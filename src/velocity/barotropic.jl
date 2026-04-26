@@ -91,83 +91,100 @@ function build_barotropic_solver(ocean_mask::Matrix{Bool},
     Is = Int[]; Js = Int[]; Vs = Float64[]
     rhs = zeros(Float64, n_dof)
 
-    # Finite-difference stencil for each interior ocean cell
+    # Finite-volume stencil at each ocean T-cell.
+    #
+    # The vorticity equation
+    #     J(ψ, f/H) − ∇·((r/H) ∇ψ) = (1/ρ₀) curl(τ/H)
+    # is discretised in flux form: each T-face carries its own (r/H)·∇ψ
+    # flux and its own (f/H) value used in the Jacobian central difference.
+    # H_face = min(H_left, H_right) — the CLIMBER-X convention so a face
+    # cannot be deeper than the shallower of its bounding cells.  Land-
+    # adjacent faces are closed (zero flux, zero coefficient).
+    #
+    # f varies only in latitude, so:
+    #   ∂(f/H)/∂x at T-cell centre  =  f(j) · (1/H_E − 1/H_W) / (2 Δx)
+    #   ∂(f/H)/∂y at T-cell centre  =  (f_N/H_N − f_S/H_S) / (2 Δy)
+    # with f_N = ½(f(j) + f(jp1)), f_S = ½(f(j) + f(jm1)) at the v-faces.
     for j in 1:nlat, i in 1:nlon
         ocean_mask[i, j] || continue
         row = cell_index[i, j]
-        Hi  = H[i, j]
-        Hi  = max(Hi, 1.0)   # guard against zero depth
+        Hi  = max(H[i, j], 1.0)
         ri  = r_bt[i, j]
         dxj = dx[j]
 
-        fi_c = f[j]            # f at cell centre (barotropic vortex stretching)
-
-        # Jacobian J(ψ, f/H): use Arakawa-type finite difference
-        # ∂(f/H)/∂x and ∂(f/H)/∂y at cell centre
         ip1 = mod1(i + 1, nlon); im1 = mod1(i - 1, nlon)
         jp1 = min(j + 1, nlat);  jm1 = max(j - 1, 1)
 
-        H_ip1 = ocean_mask[ip1, j]  ? H[ip1, j]  : Hi
-        H_im1 = ocean_mask[im1, j]  ? H[im1, j]  : Hi
-        H_jp1 = ocean_mask[i,  jp1] ? H[i,  jp1] : Hi
-        H_jm1 = ocean_mask[i,  jm1] ? H[i,  jm1] : Hi
+        # ── Face geometry ──────────────────────────────────────────────────
+        # GOLDSTEIN/CLIMBER-X convention: H_face = min(H_left, H_right) at
+        # open faces.  At closed faces (neighbour is land, ψ_land = 0) we
+        # project the cell-centre value onto the face — this preserves the
+        # diagonal contribution that enforces the Dirichlet BC ψ = 0 on
+        # continents, while giving zero off-diagonal coefficient.
+        open_E = ocean_mask[ip1, j];  open_W = ocean_mask[im1, j]
+        open_N = ocean_mask[i, jp1] && j < nlat
+        open_S = ocean_mask[i, jm1] && j > 1
 
-        f_ip1 = f[j]; f_im1 = f[j]   # f varies in latitude only
-        f_jp1 = f[jp1]; f_jm1 = f[jm1]
+        H_E = open_E ? min(Hi, H[ip1, j]) : Hi
+        H_W = open_W ? min(Hi, H[im1, j]) : Hi
+        H_N = open_N ? min(Hi, H[i, jp1]) : Hi
+        H_S = open_S ? min(Hi, H[i, jm1]) : Hi
 
-        dfH_dx = ((f_ip1/H_ip1) - (f_im1/H_im1)) / (2.0 * dxj)
-        dfH_dy = ((f_jp1/H_jp1) - (f_jm1/H_jm1)) / (2.0 * dy)
+        r_E = open_E ? 0.5 * (ri + r_bt[ip1, j]) : ri
+        r_W = open_W ? 0.5 * (ri + r_bt[im1, j]) : ri
+        r_N = open_N ? 0.5 * (ri + r_bt[i, jp1]) : ri
+        r_S = open_S ? 0.5 * (ri + r_bt[i, jm1]) : ri
 
-        # Laplacian terms (friction): ∇²ψ contributions
-        # −r_bt/H · ∇²ψ  →  diagonal and off-diagonal
-        coeff_x = ri / (Hi * dxj^2)
-        coeff_y = ri / (Hi * dy^2)
-        diag    = -2.0*(coeff_x + coeff_y)
+        # ── Friction (flux form) ───────────────────────────────────────────
+        # ∇·((r/H) ∇ψ) at T-cell, with each face contributing (r/H)_face/Δ²
+        Cfric_E = r_E / (H_E * dxj^2)
+        Cfric_W = r_W / (H_W * dxj^2)
+        Cfric_N = r_N / (H_N * dy^2)
+        Cfric_S = r_S / (H_S * dy^2)
+        diag    = -(Cfric_E + Cfric_W + Cfric_N + Cfric_S)
 
-        # Diagonal
+        # ── Jacobian (face-staggered f/H) ──────────────────────────────────
+        # ∂(f/H)/∂x at T-centre  =  f(j) · (1/H_E − 1/H_W)/(2 Δx)
+        # ∂(f/H)/∂y at T-centre  =  (f_N/H_N − f_S/H_S)/(2 Δy)
+        invH_E = H_E > 0 ? 1.0/H_E : 0.0
+        invH_W = H_W > 0 ? 1.0/H_W : 0.0
+        invH_N = H_N > 0 ? 1.0/H_N : 0.0
+        invH_S = H_S > 0 ? 1.0/H_S : 0.0
+        f_N = 0.5 * (f[j] + f[jp1])
+        f_S = 0.5 * (f[j] + f[jm1])
+        dfH_dx = f[j] * (invH_E - invH_W) / (2.0 * dxj)
+        dfH_dy = (f_N * invH_N - f_S * invH_S) / (2.0 * dy)
+
+        # J(ψ, f/H) ≈ (∂ψ/∂y)·dfH_dx − (∂ψ/∂x)·dfH_dy
+        # Central differences of ψ → coefficients on N/S/E/W neighbours.
+        coeff_J_NS = dfH_dx / (2.0 * dy)     # multiplies (ψ_N − ψ_S)
+        coeff_J_EW = dfH_dy / (2.0 * dxj)    # multiplies −(ψ_E − ψ_W)
+
+        # ── Diagonal ───────────────────────────────────────────────────────
+        # All 4 faces closed = isolated ocean cell: pin ψ = 0.  (Avoids
+        # singular row when the system is solved.)
+        if !(open_E || open_W || open_N || open_S)
+            push!(Is, row); push!(Js, row); push!(Vs, 1.0)
+            continue
+        end
         push!(Is, row); push!(Js, row); push!(Vs, diag)
 
-        # East neighbour
-        _add_neighbour!(Is, Js, Vs, row, cell_index, ip1, j, ocean_mask, coeff_x)
-        # West neighbour
-        _add_neighbour!(Is, Js, Vs, row, cell_index, im1, j, ocean_mask, coeff_x)
-        # North neighbour
-        if j < nlat
-            _add_neighbour!(Is, Js, Vs, row, cell_index, i, jp1, ocean_mask, coeff_y)
+        # ── Off-diagonals: friction (+) and Jacobian (±) combined ─────────
+        if open_E
+            _add_neighbour!(Is, Js, Vs, row, cell_index, ip1, j, ocean_mask,
+                             Cfric_E - coeff_J_EW)
         end
-        # South neighbour
-        if j > 1
-            _add_neighbour!(Is, Js, Vs, row, cell_index, i, jm1, ocean_mask, coeff_y)
+        if open_W
+            _add_neighbour!(Is, Js, Vs, row, cell_index, im1, j, ocean_mask,
+                             Cfric_W + coeff_J_EW)
         end
-
-        # Jacobian off-diagonal contributions (skew-symmetric):
-        # J(ψ,f/H)·(dxj·dy) = ψ_ip1·dfH_dx·... — assembled as additional stencil terms
-        # Simplified first-order upwind of the advection-like J operator:
-        # J(ψ,f/H) ≈ (∂ψ/∂y)·∂(f/H)/∂x − (∂ψ/∂x)·∂(f/H)/∂y
-        #           ≈ dfH_dx·(ψ_N−ψ_S)/(2dy) − dfH_dy·(ψ_E−ψ_W)/(2dxj)
-        coeff_J_x = dfH_dy / (2.0 * dxj)
-        coeff_J_y = dfH_dx / (2.0 * dy)
-
-        # Add Jacobian contributions to stencil
-        if j < nlat
-            idx_N = cell_index[i, jp1]
-            if idx_N > 0
-                push!(Is, row); push!(Js, idx_N); push!(Vs,  coeff_J_y)
-            end
+        if open_N
+            _add_neighbour!(Is, Js, Vs, row, cell_index, i, jp1, ocean_mask,
+                             Cfric_N + coeff_J_NS)
         end
-        if j > 1
-            idx_S = cell_index[i, jm1]
-            if idx_S > 0
-                push!(Is, row); push!(Js, idx_S); push!(Vs, -coeff_J_y)
-            end
-        end
-        idx_E = cell_index[ip1, j]
-        if idx_E > 0
-            push!(Is, row); push!(Js, idx_E); push!(Vs, -coeff_J_x)
-        end
-        idx_W = cell_index[im1, j]
-        if idx_W > 0
-            push!(Is, row); push!(Js, idx_W); push!(Vs,  coeff_J_x)
+        if open_S
+            _add_neighbour!(Is, Js, Vs, row, cell_index, i, jm1, ocean_mask,
+                             Cfric_S - coeff_J_NS)
         end
     end
 
