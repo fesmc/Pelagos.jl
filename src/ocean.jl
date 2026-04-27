@@ -162,20 +162,15 @@ function step_ocean!(m     ::OceanModel,
 
     ocean_mask, H, f_arr, dx, dy = _extract_barotropic_geometry(grid)
 
-    # JEBAR forcing — implementation complete (compute_jebar_forcing! uses
-    # face-bottom-summed integration with a level-mean density anomaly,
-    # giving |J(1/H, E)| ≈ wind-curl magnitude on PI ρ, T, S — see
-    # docstring).  Wiring it in below currently destabilises the no-wind
-    # tracer integration after ~120 days: the ~30 Sv barotropic flow
-    # JEBAR adds, combined with the existing FG baroclinic velocities,
-    # overshoots the first-order upwind tracer advection.  Re-enable
-    # together with a higher-order monotone tracer advection or a
-    # smaller dt.
-    #
-    # compute_jebar_forcing!(m.ubar_jbar, T, S, grid)
-    # psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask;
-    #                           ubar_jbar = m.ubar_jbar)
-    psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask)
+    # JEBAR forcing from current T, S — recomputed each step.  Density anomaly
+    # is referenced to the level-mean ρ̄(k) so the (mathematically zero)
+    # J(1/H, ρ̄·H²) discretisation residual does not swamp the baroclinic
+    # signal.  Units: kg m⁻³ s⁻²; the solver's RHS divides by ρ₀.
+    compute_jebar_forcing!(m.ubar_jbar, T, S, grid)
+
+    # Solve barotropic vorticity equation for ψ at T-cells (wind + JEBAR)
+    psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask;
+                              ubar_jbar = m.ubar_jbar)
 
     # Map ψ_T to corners.  ψ_c[i, j] is the corner at position (i−½, j−½),
     # with i=1..Nx (periodic in x) and j=1..Ny+1.  Boundary corners (j=1 and

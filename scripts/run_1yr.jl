@@ -16,15 +16,15 @@
 #                       (default: climber-x/input/fake_clim_const_WFDEI-ERA_preind.nc)
 #   PELAGOS_OUTPUT   — path to the output NetCDF file
 #                       (default: scripts/output/pelagos_1yr_monthly.nc)
-#   PELAGOS_DT_DAYS  — timestep in days (default: 1.0)
+#   PELAGOS_DT_DAYS  — timestep in days (default: 0.5)
 #   PELAGOS_NO_WIND  — if set to "1", zero out wind stress (diffusion-only baseline)
 #
-# Stability note: with the CLIMBER-X PI wind-stress climatology, the present
-# barotropic ψ solve produces |ψ_bt| ≳ 10⁶ Sv (three orders of magnitude too
-# large) and the resulting velocities drive T, S to NaN within the first
-# month.  The diffusion-only baseline (PELAGOS_NO_WIND=1) runs cleanly for the
-# full year — see project memory.  Treat this script as the harness; the
-# physics fix belongs in the barotropic solver, not here.
+# Stability: dt = 0.5 d is the working default with the JEBAR forcing
+# enabled in step_ocean!.  Larger dt (e.g. 1.0 d) drives T, S to NaN
+# within ~4 months as the first-order upwind tracer advection cannot
+# handle the barotropic flow JEBAR adds at strong-bathymetry cells.
+# A future tracer-scheme upgrade (higher-order monotone advection) may
+# allow dt = 1 d again.
 #
 # The "year" used here is the GOLDSTEIN/CLIMBER-X 360-day calendar:
 # 12 months × 30 days each.  A snapshot is written at the end of every month.
@@ -47,7 +47,7 @@ const RESTART_DIR  = get(ENV, "PELAGOS_RESTART", joinpath(PROJECT_DIR, "climber-
 const FORCING_FILE = get(ENV, "PELAGOS_FORCING", joinpath(PROJECT_DIR, "climber-x", "input",
                                                            "fake_clim_const_WFDEI-ERA_preind.nc"))
 const OUTPUT_FILE  = get(ENV, "PELAGOS_OUTPUT",  joinpath(@__DIR__, "output", "pelagos_1yr_monthly.nc"))
-const DT_DAYS      = parse(Float64, get(ENV, "PELAGOS_DT_DAYS", "1.0"))
+const DT_DAYS      = parse(Float64, get(ENV, "PELAGOS_DT_DAYS", "0.5"))
 const NO_WIND      = get(ENV, "PELAGOS_NO_WIND", "0") == "1"
 
 const DAYS_PER_MONTH = 30
