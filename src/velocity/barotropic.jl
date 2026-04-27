@@ -257,13 +257,21 @@ function compute_rbt(ocean_mask::Matrix{Bool},
 end
 
 """
-    solve_barotropic!(solver, tau_x, tau_y, H, f, dx, dy, ocean_mask) -> Matrix{Float64}
+    solve_barotropic!(solver, tau_x, tau_y, H, f, dx, dy, ocean_mask;
+                       cos_phi_T=nothing, ubar_jbar=nothing) -> Matrix{Float64}
 
 Solve for the barotropic streamfunction ψ in m³ s⁻¹ (1 Sv = 10⁶ m³ s⁻¹).
 Returns ψ on the full (nlon, nlat) grid (land cells = 0).
 
 Wind stress `tau_x`, `tau_y` in N m⁻²; the assembler divides by `RHO_0` so
 the equation is dimensionally consistent.
+
+Spherical curl: when `cos_phi_T` is supplied (length `nlat`, cosines of T-row
+latitudes), the meridional piece of `curl(τ/H)` is computed in the
+CLIMBER-X form `(1/(R cosφ_T))·∂(τx·cosφ/H)/∂φ` rather than the flat-earth
+`∂(τx/H)/∂y`.  At high latitudes the difference (`τx·tanφ/(R·H)` metric
+correction) is order-unity.  Without `cos_phi_T` the flat-earth form is
+used (kept for tests that build a test grid without lat metadata).
 """
 function solve_barotropic!(solver     ::BarotropicSolver,
                            tau_x      ::Matrix{Float64},
@@ -273,6 +281,7 @@ function solve_barotropic!(solver     ::BarotropicSolver,
                            dx         ::Vector{Float64},
                            dy         ::Float64,
                            ocean_mask ::Matrix{Bool};
+                           cos_phi_T  ::Union{Nothing, Vector{Float64}} = nothing,
                            ubar_jbar  ::Union{Nothing, Matrix{Float64}} = nothing
                           )::Matrix{Float64}
     nlon, nlat = size(ocean_mask)
@@ -280,6 +289,7 @@ function solve_barotropic!(solver     ::BarotropicSolver,
     ci    = solver.cell_index
 
     fill!(rhs, 0.0)
+    use_spherical = !isnothing(cos_phi_T)
 
     # Assemble RHS: (1/ρ₀) · [curl(τ/H) + JEBAR].
     # The barotropic vorticity equation has units s⁻²:
@@ -290,6 +300,13 @@ function solve_barotropic!(solver     ::BarotropicSolver,
     #
     # JEBAR sign: the Jacobian J(1/H, E) = -J(E, 1/H), so we ADD ubar_jbar
     # to the wind-stress term — `ubar_jbar` itself is already J(1/H, E).
+    #
+    # Spherical curl on a lat-lon grid (CLIMBER-X wind.f90 form):
+    #   curl(τ/H)|_z = (1/(R cosφ))·∂(τy/H)/∂λ
+    #                  − (1/(R cosφ))·∂((τx/H)·cosφ)/∂φ
+    # The first term is `Δ(τy/H)/(2·dxj)` since `dxj = R cosφ_T·Δλ` already.
+    # The second uses `Δ((τx/H)·cosφ)/(2·dy·cosφ_T)` — note the cosφ inside
+    # the difference (T-row cosines on each side) and 1/cosφ_T outside.
     for j in 1:nlat, i in 1:nlon
         ocean_mask[i, j] || continue
         row = ci[i, j]
@@ -299,9 +316,29 @@ function solve_barotropic!(solver     ::BarotropicSolver,
         ip1 = mod1(i+1,nlon); im1 = mod1(i-1,nlon)
         jp1 = min(j+1,nlat);  jm1 = max(j-1,1)
 
-        # curl(τ/H) = ∂(τy/H)/∂x − ∂(τx/H)/∂y
+        # ∂(τy/H)/∂x − same on the sphere because dxj already carries cosφ_T.
         dtauY_dx = (tau_y[ip1,j]/max(H[ip1,j],1.0) - tau_y[im1,j]/max(H[im1,j],1.0)) / (2.0*dxj)
-        dtauX_dy = (tau_x[i,jp1]/max(H[i,jp1],1.0) - tau_x[i,jm1]/max(H[i,jm1],1.0)) / (2.0*dy)
+
+        # Meridional piece of curl.  Spherical form has a 1/cosφ_T factor
+        # outside the difference; at the polar rows of a φ-coord lat-lon
+        # grid (cos ≈ 0.044 at ±87.5°) this would amplify the discrete
+        # curl ~25×.  CLIMBER-X avoids this by working in sinφ-coords
+        # throughout — for our φ-coord solver we floor cos_phi_T at the
+        # equivalent of |φ| ≤ 85° (cos = 0.0872).  The high-latitude
+        # band where this kicks in is essentially Antarctic ice shelf or
+        # the Arctic, and the JEBAR + friction terms dominate there
+        # anyway, so the floor only affects the wind contribution in
+        # what is already a regularised regime.
+        if use_spherical
+            cφ_jp1 = cos_phi_T[jp1]
+            cφ_jm1 = cos_phi_T[jm1]
+            cφ_T   = max(cos_phi_T[j], 0.0872)   # cos(85°)
+            num    = tau_x[i,jp1] * cφ_jp1 / max(H[i,jp1], 1.0) -
+                     tau_x[i,jm1] * cφ_jm1 / max(H[i,jm1], 1.0)
+            dtauX_dy = num / (2.0 * dy * cφ_T)
+        else
+            dtauX_dy = (tau_x[i,jp1]/max(H[i,jp1],1.0) - tau_x[i,jm1]/max(H[i,jm1],1.0)) / (2.0*dy)
+        end
         wind_term = dtauY_dx - dtauX_dy
 
         jbar_term = isnothing(ubar_jbar) ? 0.0 : ubar_jbar[i, j]

@@ -129,6 +129,36 @@ using Pelagos.Baroclinic: coriolis_parameter
         @test ψmax < 5 * ψ_sv                # never larger than ~Sverdrup
     end
 
+    # Constant zonal wind stress over a uniform-H all-ocean domain.  In the
+    # flat-earth curl form, ∂(τx/H)/∂y = 0 → curl ≡ 0 → ψ ≡ 0.  The full
+    # spherical form has the metric correction τx·tanφ/(R·H), which off the
+    # equator is non-zero and must produce non-trivial ψ.  This test pins
+    # that distinction.
+    @testset "Spherical curl: constant τx → ψ ≠ 0 off equator" begin
+        nlon, nlat = 6, 4
+        ocean_mask = fill(true, nlon, nlat)
+        H    = fill(4000.0, nlon, nlat)
+        # Mid-latitude band centred on 30°N
+        cos_T = [cosd(20.0 + 5*j) for j in 1:nlat]   # 25, 30, 35, 40 deg
+        f    = [coriolis_parameter(20.0 + 5.0*j) for j in 1:nlat]
+        dx   = [6.371e6 * deg2rad(5.0) * c for c in cos_T]
+        dy   = 6.371e6 * deg2rad(5.0)
+        r_bt = compute_rbt(ocean_mask, H, dx, dy)
+        solver = build_barotropic_solver(ocean_mask, f, H, dx, dy, r_bt)
+
+        tau_x = fill(0.1, nlon, nlat)        # uniform westerly
+        tau_y = zeros(nlon, nlat)
+
+        ψ_flat  = solve_barotropic!(solver, tau_x, tau_y, H, f, dx, dy, ocean_mask)
+        ψ_sphr  = solve_barotropic!(solver, tau_x, tau_y, H, f, dx, dy, ocean_mask;
+                                     cos_phi_T = cos_T)
+
+        # Flat-earth: constant τx → ∂(τx/H)/∂y = 0 → ψ identically zero
+        @test maximum(abs.(ψ_flat)) < 1e-6
+        # Spherical: tanφ correction is non-zero in mid-latitudes → ψ ≠ 0
+        @test maximum(abs.(ψ_sphr)) > 1e3   # ≳ 0.001 Sv (small but present)
+    end
+
     # JEBAR forcing utility — basic invariants.  The full physics is staged
     # for follow-up (`step_ocean!` does not yet use this); this test just
     # checks the function is type-stable and produces zero forcing on a

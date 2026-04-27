@@ -160,7 +160,7 @@ function step_ocean!(m     ::OceanModel,
     # transport.  A future refactor can solve the vorticity equation directly
     # on the F-grid.
 
-    ocean_mask, H, f_arr, dx, dy = _extract_barotropic_geometry(grid)
+    ocean_mask, H, f_arr, dx, dy, cos_phi_T = _extract_barotropic_geometry(grid)
 
     # JEBAR forcing from current T, S — recomputed each step.  Density anomaly
     # is referenced to the level-mean ρ̄(k) so the (mathematically zero)
@@ -168,8 +168,11 @@ function step_ocean!(m     ::OceanModel,
     # signal.  Units: kg m⁻³ s⁻²; the solver's RHS divides by ρ₀.
     compute_jebar_forcing!(m.ubar_jbar, T, S, grid)
 
-    # Solve barotropic vorticity equation for ψ at T-cells (wind + JEBAR)
+    # Solve barotropic vorticity equation for ψ at T-cells (wind + JEBAR).
+    # Pass cos_phi_T so the meridional curl term uses the spherical
+    # CLIMBER-X form rather than flat-earth.
     psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask;
+                              cos_phi_T = cos_phi_T,
                               ubar_jbar = m.ubar_jbar)
 
     # Map ψ_T to corners.  ψ_c[i, j] is the corner at position (i−½, j−½),
@@ -298,7 +301,9 @@ function _extract_barotropic_geometry(grid::AbstractGrid)
                  s * max(abs(fj), 5e-6)
              end for j in 1:Ny]
 
-    return ocean_mask, H, f_arr, dx, dy
+    cos_phi_T = [cosd(grid.φᵃᶜᵃ[j]) for j in 1:Ny]
+
+    return ocean_mask, H, f_arr, dx, dy, cos_phi_T
 end
 
 end # module Ocean
