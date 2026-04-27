@@ -162,13 +162,15 @@ function step_ocean!(m     ::OceanModel,
 
     ocean_mask, H, f_arr, dx, dy = _extract_barotropic_geometry(grid)
 
-    # JEBAR forcing — currently disabled.  `compute_jebar_forcing` produces
-    # the right structure but uses a cell-bottom depth integral; at interior
-    # cells with sharp bathymetric variation this overstates E by an order
-    # of magnitude relative to CLIMBER-X's face-bottom (common-bottom)
-    # integration.  Wiring it in as-is gives |ψ_bt| ~ 10⁵ Sv from JEBAR
-    # alone — much worse than the wind-only solution.  Re-enable once the
-    # face-bottom-summed form is implemented (jbar.f90 reference).
+    # JEBAR forcing — implementation complete (compute_jebar_forcing! uses
+    # face-bottom-summed integration with a level-mean density anomaly,
+    # giving |J(1/H, E)| ≈ wind-curl magnitude on PI ρ, T, S — see
+    # docstring).  Wiring it in below currently destabilises the no-wind
+    # tracer integration after ~120 days: the ~30 Sv barotropic flow
+    # JEBAR adds, combined with the existing FG baroclinic velocities,
+    # overshoots the first-order upwind tracer advection.  Re-enable
+    # together with a higher-order monotone tracer advection or a
+    # smaller dt.
     #
     # compute_jebar_forcing!(m.ubar_jbar, T, S, grid)
     # psi_T = solve_barotropic!(m.bar_solver, tau_x, tau_y, H, f_arr, dx, dy, ocean_mask;

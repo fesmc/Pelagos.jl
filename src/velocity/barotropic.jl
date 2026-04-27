@@ -332,24 +332,33 @@ Compute the JEBAR (Joint Effect of Baroclinicity And Relief) forcing for the
 barotropic-vorticity RHS, in units of kg m⁻³ s⁻² (= Pa m⁻², equivalent to
 the wind-stress curl term *before* division by ρ₀).
 
-The CLIMBER-X formulation:
+The CLIMBER-X formulation (jbar.f90):
 
   bp(i, j, k) = − ∫_{z_bottom}^{z_k} ρ g dz        (Pa, zero at the bottom)
-  E(i, j)     = ∫_{bottom}^{0} bp dz               (Pa·m)
-  ubar_jbar   = J(1/H, E) at each T-cell
 
-Spatial derivatives are central-differenced (consistent with the rest of
-the matrix assembly).  At ocean–land neighbours the corresponding gradient
-piece is set to zero, equivalent to clamping `1/H = 0` over land — a
-flux-form treatment of the closed boundary.
+For each face F between two T-cells, integrate `bp · dz` from a *common
+face-bottom level* `k_face = max(k_bot_left, k_bot_right)` — using the
+deeper of the two cells' active ranges so any sub-shelf contributions
+that would differ between the two cells are excluded.  Then form
 
-Periodic in λ; bounded north/south.  Land cells return 0.
+  E_F     = Σ_{k≥k_face} ½(bp_left(k) + bp_right(k)) dz(k)        (Pa·m)
+  invH_F  = 1 / Σ_{k≥k_face} dz(k)                                 (m⁻¹)
+
+The T-cell JEBAR is the central difference on those face values:
+
+  ubar_jbar[i,j] = ∂(1/H)/∂x · ∂E/∂y − ∂(1/H)/∂y · ∂E/∂x
+
+with ∂(1/H)/∂x = (invH_E − invH_W)/Δx (and similarly for y), and likewise
+for ∂E.  At ocean–land faces the face-bottom level lies above any active
+layer, so both E_F and invH_F vanish identically — the closed-boundary
+treatment falls out of the staggering rather than a special case.
+
+Periodic in λ; bounded north/south.
 """
 function compute_jebar_forcing(T    ::Field{Center, Center, Center},
                                S    ::Field{Center, Center, Center},
                                grid ::AbstractGrid)::Matrix{Float64}
-    Nx = grid.Nx; Ny = grid.Ny; Nz = grid.Nz
-    out = zeros(Float64, Nx, Ny)
+    out = zeros(Float64, grid.Nx, grid.Ny)
     compute_jebar_forcing!(out, T, S, grid)
     return out
 end
@@ -361,69 +370,112 @@ function compute_jebar_forcing!(ubar_jbar::Matrix{Float64},
     Nx = grid.Nx; Ny = grid.Ny; Nz = grid.Nz
     Td = interior(T); Sd = interior(S)
 
-    # ── Step 1: bp[i,j,k] = baroclinic pressure relative to bottom (Pa) ──
-    # bp = 0 at the deepest active level; integrate upward using avg ρ on
-    # the interface and the cell-centre-to-cell-centre distance dza.
+    # ── Pre-step: density anomaly ρ' = ρ − ρ̄(k) ─────────────────────────
+    # Subtract the horizontal-mean density at each level.  J(1/H, ρ̄·H²) is
+    # mathematically zero (ρ̄ depends only on z), but its discrete residual
+    # on a coarse grid swamps the physical baroclinic signal by ~4 orders
+    # of magnitude.  Removing the level-mean removes that noise floor.
+    # k_bot[i,j] = deepest active level (Nz+1 sentinel for fully-land).
+    ρ_anom = zeros(Float64, Nx, Ny, Nz)
+    k_bot  = fill(Nz + 1, Nx, Ny)
+    @inbounds for j in 1:Ny, i in 1:Nx
+        for k in 1:Nz
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
+            k_bot[i, j] = k; break
+        end
+    end
+    @inbounds for k in 1:Nz
+        sum_ρ = 0.0; n = 0
+        for j in 1:Ny, i in 1:Nx
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
+            ρij = seawater_density(Td[i,j,k], max(Sd[i,j,k], 0.0), 0.0)
+            sum_ρ += ρij; n += 1
+        end
+        ρ_mean_k = n > 0 ? sum_ρ / n : 0.0
+        for j in 1:Ny, i in 1:Nx
+            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
+            ρij = seawater_density(Td[i,j,k], max(Sd[i,j,k], 0.0), 0.0)
+            ρ_anom[i, j, k] = ρij - ρ_mean_k
+        end
+    end
+
+    # ── Step 1: bp[i,j,k] = ∫ density-anomaly weight (Pa, zero at bottom) ─
+    # bp(z) = -∫_bot^z ρ'(z') g dz'  ; integrated with trapezoidal rule on
+    # cell-centre-to-cell-centre spacings.
     bp = zeros(Float64, Nx, Ny, Nz)
     @inbounds for j in 1:Ny, i in 1:Nx
-        # find deepest active layer for this column
-        k_bot = 0
-        for k in 1:Nz
-            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
-            k_bot = k; break
-        end
-        k_bot == 0 && continue          # all-land column
-        for k in (k_bot+1):Nz
+        kb = k_bot[i, j]
+        kb > Nz && continue
+        for k in (kb+1):Nz
             inactive_node(i, j, k, grid, Center(), Center(), Center()) && break
-            ρ_above = seawater_density(Td[i,j,k],   max(Sd[i,j,k],   0.0), 0.0)
-            ρ_below = seawater_density(Td[i,j,k-1], max(Sd[i,j,k-1], 0.0), 0.0)
             dza = 0.5 * (Δzᵃᵃᶜ(i, j, k-1, grid) + Δzᵃᵃᶜ(i, j, k, grid))
-            bp[i,j,k] = bp[i,j,k-1] - G * 0.5 * (ρ_above + ρ_below) * dza
+            bp[i, j, k] = bp[i, j, k-1] -
+                          G * 0.5 * (ρ_anom[i, j, k] + ρ_anom[i, j, k-1]) * dza
         end
     end
 
-    # ── Step 2: E[i,j] = Σ_k bp · dz_k (Pa·m) and 1/H from ocean column ──
-    E    = zeros(Float64, Nx, Ny)
-    invH = zeros(Float64, Nx, Ny)
+    # ── Step 2: face-bottom-summed E and 1/H on u- and v-faces ──────────
+    # u-face (i+½, j) is between T-cells (i,j) and (ip1,j).
+    # v-face (i, j+½) is between T-cells (i,j) and (i,jp1).
+    # For each face, k_face = max(k_bot_left, k_bot_right); if that is
+    # > Nz the face is entirely below land for at least one side, hence
+    # closed (E and invH stay 0).
+    E_u    = zeros(Float64, Nx, Ny)        # at (i+½, j)
+    E_v    = zeros(Float64, Nx, Ny)        # at (i, j+½)
+    invH_u = zeros(Float64, Nx, Ny)
+    invH_v = zeros(Float64, Nx, Ny)
+
     @inbounds for j in 1:Ny, i in 1:Nx
-        Hcol = 0.0
-        for k in 1:Nz
-            inactive_node(i, j, k, grid, Center(), Center(), Center()) && continue
-            dzk = Δzᵃᵃᶜ(i, j, k, grid)
-            E[i,j] += bp[i,j,k] * dzk
-            Hcol   += dzk
+        ip1 = mod1(i + 1, Nx)
+
+        # u-face (i+½, j)
+        kf_u = max(k_bot[i, j], k_bot[ip1, j])
+        if kf_u <= Nz
+            sum_dz = 0.0; sum_bp = 0.0
+            for k in kf_u:Nz
+                dzk = Δzᵃᵃᶜ(i, j, k, grid)        # Δzᵃᵃᶜ depends on k only, not i,j
+                sum_dz += dzk
+                sum_bp += 0.5 * (bp[i, j, k] + bp[ip1, j, k]) * dzk
+            end
+            E_u[i, j]    = sum_bp
+            invH_u[i, j] = sum_dz > 0 ? 1.0 / sum_dz : 0.0
         end
-        Hcol > 0 && (invH[i,j] = 1.0 / Hcol)
+
+        # v-face (i, j+½) — only meaningful if j < Ny (no v-face at Ny+½ inside domain)
+        if j < Ny
+            kf_v = max(k_bot[i, j], k_bot[i, j+1])
+            if kf_v <= Nz
+                sum_dz = 0.0; sum_bp = 0.0
+                for k in kf_v:Nz
+                    dzk = Δzᵃᵃᶜ(i, j, k, grid)
+                    sum_dz += dzk
+                    sum_bp += 0.5 * (bp[i, j, k] + bp[i, j+1, k]) * dzk
+                end
+                E_v[i, j]    = sum_bp
+                invH_v[i, j] = sum_dz > 0 ? 1.0 / sum_dz : 0.0
+            end
+        end
     end
 
-    # ── Step 3: J(1/H, E) on T-cells via central difference ──────────────
-    # ubar_jbar[i,j] = ∂(1/H)/∂x · ∂E/∂y − ∂(1/H)/∂y · ∂E/∂x
-    #
-    # At coastal cells (any land neighbour) the bathymetric gradient
-    # ∂(1/H)/∂· spikes — the "JEBAR cliff" effect — and an unconditioned
-    # central difference produces unphysically large forcing.  We zero
-    # out those cells; the ψ contribution from coastal columns can be
-    # restored later via the corner-averaged form (CLIMBER-X jbar.f90)
-    # but keeping things simple here lets us validate the interior JEBAR
-    # signal before tackling the coastal staggering separately.
+    # ── Step 3: J(1/H, E) on T-cells from face-staggered values ─────────
+    # ∂(1/H)/∂x and ∂E/∂x at T-cell C use u-faces E and W.
+    # ∂(1/H)/∂y and ∂E/∂y at T-cell C use v-faces N and S.
+    # Index mapping: u-face (i+½, j) lives at array index (i, j); the W
+    # face of T-cell (i, j) is u-face (i-½, j) = array index (im1, j).
+    # Similarly v-face (i, j+½) at (i, j); S face of T-cell (i, j) at (i, j-1).
     fill!(ubar_jbar, 0.0)
     @inbounds for j in 2:(Ny-1), i in 1:Nx
-        invH[i,j] == 0.0 && continue
-        ip1 = mod1(i+1, Nx); im1 = mod1(i-1, Nx)
+        # Skip fully-land cells.
+        k_bot[i, j] > Nz && continue
 
-        # All four neighbours must be ocean (i.e. interior ocean cell).
-        if invH[ip1,j] == 0.0 || invH[im1,j] == 0.0 ||
-           invH[i,j+1] == 0.0 || invH[i,j-1] == 0.0
-            continue
-        end
-
+        ip1 = mod1(i + 1, Nx); im1 = mod1(i - 1, Nx)
         dxj = Δxᶜᶜᶜ(i, j, 1, grid)
         dy  = Δyᶜᶜᶜ(i, j, 1, grid)
 
-        d_invH_dx = (invH[ip1, j  ] - invH[im1, j  ]) / (2.0 * dxj)
-        d_invH_dy = (invH[i,   j+1] - invH[i,   j-1]) / (2.0 * dy)
-        dE_dx     = (E[ip1, j  ]    - E[im1, j  ])    / (2.0 * dxj)
-        dE_dy     = (E[i,   j+1]    - E[i,   j-1])    / (2.0 * dy)
+        d_invH_dx = (invH_u[i,   j  ] - invH_u[im1, j  ]) / dxj
+        d_invH_dy = (invH_v[i,   j  ] - invH_v[i,   j-1]) / dy
+        dE_dx     = (E_u[i,   j  ]    - E_u[im1, j  ])    / dxj
+        dE_dy     = (E_v[i,   j  ]    - E_v[i,   j-1])    / dy
 
         ubar_jbar[i, j] = d_invH_dx * dE_dy - d_invH_dy * dE_dx
     end
